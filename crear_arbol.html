@@ -4,11 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crear Árbol Conmemorativo</title>
+  <title>Crear Árbol Conmemorativo (Autenticado)</title>
 </head>
 <body>
   <h2>Crear Árbol</h2>
-  <form id="treeForm">
+  <form id="treeForm" style="display:none;">
     <label>Nombre del árbol:</label>
     <input type="text" id="treeName" required /><br/><br/>
     <label>Imágenes (máximo 5):</label>
@@ -36,17 +36,17 @@
     const auth = getAuth(app);
     const storage = getStorage(app);
     const db = getFirestore(app);
-
     const estado = document.getElementById("estado");
+    const form = document.getElementById("treeForm");
 
     onAuthStateChanged(auth, (user) => {
       if (!user) {
         estado.textContent = "Debes iniciar sesión para crear un árbol.";
-        document.getElementById("treeForm").style.display = "none";
         return;
       }
 
-      document.getElementById("treeForm").addEventListener("submit", async (e) => {
+      form.style.display = "block";
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const nombre = document.getElementById("treeName").value.trim();
         const files = document.getElementById("treeImages").files;
@@ -62,9 +62,11 @@
         try {
           for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const imagePath = `arboles/${user.uid}/${Date.now()}-${file.name}`;
-            const imgRef = storageRef(storage, imagePath);
-            const snapshot = await uploadBytes(imgRef, file, { contentType: file.type });
+            const safeName = `${Date.now()}_${i}.jpg`;
+            const path = `arboles/${user.uid}/${safeName}`;
+            const ref = storageRef(storage, path);
+            const metadata = { contentType: file.type };
+            const snapshot = await uploadBytes(ref, file, metadata);
             const url = await getDownloadURL(snapshot.ref);
             imageUrls.push(url);
           }
@@ -77,7 +79,7 @@
           });
 
           estado.textContent = "🌳 Árbol creado con éxito.";
-          document.getElementById("treeForm").reset();
+          form.reset();
         } catch (error) {
           estado.textContent = "❌ Error al guardar el árbol: " + error.message;
         }

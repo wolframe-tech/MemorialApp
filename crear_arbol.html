@@ -11,6 +11,7 @@
     label { display: block; margin-top: 10px; font-weight: bold; }
     input, select, textarea { margin-top: 5px; margin-bottom: 10px; width: 100%; padding: 8px; }
     model-viewer { width: 100%; height: 400px; background-color: #f0f0f0; border-radius: 10px; }
+    iframe { width: 100%; height: 300px; border-radius: 10px; margin-top: 10px; }
     button { padding: 10px 20px; margin-top: 15px; }
   </style>
 </head>
@@ -29,7 +30,7 @@
       <option value="flowerpot.glb">Maceta con flor</option>
     </select>
 
-    <model-viewer id="preview" src="" alt="Vista previa" auto-rotate camera-controls ar></model-viewer>
+    <model-viewer id="preview" src="" alt="Vista previa del árbol" auto-rotate camera-controls ar></model-viewer>
 
     <label>Fecha de nacimiento:</label>
     <input type="date" id="nacimiento" />
@@ -39,6 +40,7 @@
 
     <label>Enlace de canción (YouTube):</label>
     <input type="url" id="cancion" />
+    <iframe id="previewYoutube" style="display:none;" allowfullscreen></iframe>
 
     <label>Imágenes (máximo 5):</label>
     <input type="file" id="imagenes" accept="image/*" multiple />
@@ -67,6 +69,7 @@
 
     const selector = document.getElementById("modelo");
     const vista = document.getElementById("preview");
+    const youtubePreview = document.getElementById("previewYoutube");
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
 
     const actualizarVista = () => {
@@ -76,6 +79,19 @@
 
     selector.addEventListener("change", actualizarVista);
     window.addEventListener("load", actualizarVista);
+
+    document.getElementById("cancion").addEventListener("input", (e) => {
+      const url = e.target.value;
+      const match = url.match(/(?:youtube\.com.*[\?&]v=|youtu\.be\/)([^&\n?#]+)/);
+      if (match && match[1]) {
+        const embed = "https://www.youtube.com/embed/" + match[1];
+        youtubePreview.src = embed;
+        youtubePreview.style.display = "block";
+      } else {
+        youtubePreview.src = "";
+        youtubePreview.style.display = "none";
+      }
+    });
 
     async function subirImagen(file, uid) {
       const formData = new FormData();
@@ -135,6 +151,8 @@
           estado.textContent = "🌳 Árbol guardado correctamente.";
           document.getElementById("formArbol").reset();
           actualizarVista();
+          youtubePreview.src = "";
+          youtubePreview.style.display = "none";
         } catch (error) {
           estado.textContent = "Error: " + error.message;
         }

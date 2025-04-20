@@ -7,37 +7,21 @@
   <title>Crear Árbol Conmemorativo</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    input, select {
-      margin-top: 5px;
-      margin-bottom: 10px;
-      width: 100%;
-      padding: 8px;
-    }
-    model-viewer {
-      width: 100%;
-      height: 400px;
-      background-color: #f0f0f0;
-      border-radius: 10px;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select, textarea { margin-top: 5px; margin-bottom: 10px; width: 100%; padding: 8px; }
+    model-viewer { width: 100%; height: 400px; background-color: #f0f0f0; border-radius: 10px; }
+    button { padding: 10px 20px; margin-top: 15px; }
   </style>
 </head>
 <body>
   <h2>Crear Árbol Conmemorativo</h2>
-  <form>
-    <label for="nombre">Nombre del árbol:</label>
-    <input type="text" id="nombre" name="nombre" />
+  <form id="formArbol">
+    <label>Nombre del árbol:</label>
+    <input type="text" id="nombre" required />
 
-    <label for="modelo">Selecciona un modelo 3D:</label>
-    <select id="modelo" name="modelo">
+    <label>Selecciona un modelo 3D:</label>
+    <select id="modelo">
       <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
       <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
       <option value="tree_elm.glb">Olmo</option>
@@ -45,28 +29,117 @@
       <option value="flowerpot.glb">Maceta con flor</option>
     </select>
 
-    <model-viewer id="preview" src="" alt="Vista previa del árbol" auto-rotate camera-controls ar></model-viewer>
+    <model-viewer id="preview" src="" alt="Vista previa" auto-rotate camera-controls ar></model-viewer>
 
-    <label for="nacimiento">Fecha de nacimiento:</label>
-    <input type="date" id="nacimiento" name="nacimiento" />
+    <label>Fecha de nacimiento:</label>
+    <input type="date" id="nacimiento" />
 
-    <label for="fallecimiento">Fecha de fallecimiento:</label>
-    <input type="date" id="fallecimiento" name="fallecimiento" />
+    <label>Fecha de fallecimiento:</label>
+    <input type="date" id="fallecimiento" />
+
+    <label>Enlace de canción (YouTube):</label>
+    <input type="url" id="cancion" />
+
+    <label>Imágenes (máximo 5):</label>
+    <input type="file" id="imagenes" accept="image/*" multiple />
+
+    <button type="submit">Guardar Árbol</button>
+    <p id="estado"></p>
   </form>
 
-  <script>
-    const modeloSelector = document.getElementById('modelo');
-    const preview = document.getElementById('preview');
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const selector = document.getElementById("modelo");
+    const vista = document.getElementById("preview");
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
 
-    function actualizarPreview() {
-      const filename = encodeURIComponent(modeloSelector.value);
-      preview.src = baseUrl + filename + "?alt=media";
+    const actualizarVista = () => {
+      const archivo = encodeURIComponent(selector.value);
+      vista.src = baseUrl + archivo + "?alt=media";
+    };
+
+    selector.addEventListener("change", actualizarVista);
+    window.addEventListener("load", actualizarVista);
+
+    async function subirImagen(file, uid) {
+      const formData = new FormData();
+      formData.append("archivo", file);
+      const response = await fetch("https://us-central1-memorialapp-b1ccf.cloudfunctions.net/subirImagen", {
+        method: "POST",
+        headers: { "x-user-id": uid },
+        body: formData
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Error al subir imagen");
+      return result.url;
     }
 
-    modeloSelector.addEventListener("change", actualizarPreview);
-    window.addEventListener("load", actualizarPreview);
+    onAuthStateChanged(auth, (usuario) => {
+      if (!usuario) {
+        document.getElementById("estado").textContent = "Debes iniciar sesión.";
+        return;
+      }
+
+      document.getElementById("formArbol").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const estado = document.getElementById("estado");
+        estado.textContent = "Guardando...";
+
+        const nombre = document.getElementById("nombre").value.trim();
+        const modelo = document.getElementById("modelo").value;
+        const nacimiento = document.getElementById("nacimiento").value;
+        const fallecimiento = document.getElementById("fallecimiento").value;
+        const cancion = document.getElementById("cancion").value;
+        const imagenes = document.getElementById("imagenes").files;
+
+        if (imagenes.length > 5) {
+          estado.textContent = "Máximo 5 imágenes.";
+          return;
+        }
+
+        const urlsImagenes = [];
+
+        try {
+          for (let i = 0; i < imagenes.length; i++) {
+            const url = await subirImagen(imagenes[i], usuario.uid);
+            urlsImagenes.push(url);
+          }
+
+          await addDoc(collection(db, "arboles"), {
+            uid: usuario.uid,
+            nombre,
+            modelo,
+            nacimiento,
+            fallecimiento,
+            cancion,
+            imagenes: urlsImagenes,
+            creado: serverTimestamp()
+          });
+
+          estado.textContent = "🌳 Árbol guardado correctamente.";
+          document.getElementById("formArbol").reset();
+          actualizarVista();
+        } catch (error) {
+          estado.textContent = "Error: " + error.message;
+        }
+      });
+    });
   </script>
 </body>
 </html>

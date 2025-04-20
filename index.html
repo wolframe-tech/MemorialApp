@@ -5,9 +5,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Memorial App - Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 30px auto;
+      text-align: center;
+    }
+    #recovery-section {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    .link {
+      color: #007bff;
+      text-decoration: underline;
+      cursor: pointer;
+      margin-top: 10px;
+      display: inline-block;
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -66,14 +87,44 @@
         alert(error.message);
       }
     };
+
+    window.showRecovery = () => {
+      const email = document.getElementById("email").value;
+      if (!email) {
+        alert("Por favor escribe tu correo antes de recuperar contraseña.");
+        return;
+      }
+      document.getElementById("recovery-email").value = email;
+      document.getElementById("recovery-section").style.display = "block";
+    };
+
+    window.recoverPassword = async () => {
+      const email = document.getElementById("recovery-email").value;
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Se ha enviado un enlace de recuperación a tu correo.");
+        document.getElementById("recovery-section").style.display = "none";
+      } catch (error) {
+        alert(error.message);
+      }
+    };
   </script>
 </head>
 <body>
   <h1>Memorial App</h1>
   <input type="email" id="email" placeholder="Correo electrónico" />
   <input type="password" id="password" placeholder="Contraseña" />
+  <br /><br />
   <button onclick="login()">Iniciar sesión</button>
   <button onclick="register()">Registrarse</button>
   <button onclick="loginWithGoogle()">Iniciar sesión con Google</button>
+  <div class="link" onclick="showRecovery()">¿Olvidaste tu contraseña?</div>
+
+  <div id="recovery-section">
+    <h4>Recuperar contraseña</h4>
+    <input type="email" id="recovery-email" readonly />
+    <br /><br />
+    <button onclick="recoverPassword()">Enviar enlace de recuperación</button>
+  </div>
 </body>
 </html>

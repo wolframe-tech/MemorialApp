@@ -4,144 +4,69 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crear Árbol con Modelos Actualizados</title>
+  <title>Crear Árbol Conmemorativo</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    model-viewer { width: 100%; height: 300px; border-radius: 10px; background: #f0f0f0; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input, select {
+      margin-top: 5px;
+      margin-bottom: 10px;
+      width: 100%;
+      padding: 8px;
+    }
+    model-viewer {
+      width: 100%;
+      height: 400px;
+      background-color: #f0f0f0;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body>
   <h2>Crear Árbol Conmemorativo</h2>
-  <form id="treeForm">
-    <label>Nombre del árbol:</label>
-    <input type="text" id="treeName" required /><br/><br/>
+  <form>
+    <label for="nombre">Nombre del árbol:</label>
+    <input type="text" id="nombre" name="nombre" />
 
-    <label>Selecciona un modelo 3D:</label>
-    <select id="treeModel" required>
-      <option value="tree_elm.glb">Árbol Olmo</option>
-      <option value="ficus_bonsai.glb">Bonsái</option>
-      <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
+    <label for="modelo">Selecciona un modelo 3D:</label>
+    <select id="modelo" name="modelo">
       <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
-      <option value="flowerpot.glb">Maceta</option>
-    </select><br/><br/>
+      <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
+      <option value="tree_elm.glb">Olmo</option>
+      <option value="ficus_bonsai.glb">Ficus Bonsai</option>
+      <option value="flowerpot.glb">Maceta con flor</option>
+    </select>
 
-    <model-viewer id="vistaModelo" src="" alt="Vista previa del modelo 3D" camera-controls auto-rotate></model-viewer><br/><br/>
+    <model-viewer id="preview" src="" alt="Vista previa del árbol" auto-rotate camera-controls ar></model-viewer>
 
-    <label>Fecha de nacimiento:</label>
-    <input type="date" id="birthDate" /><br/><br/>
+    <label for="nacimiento">Fecha de nacimiento:</label>
+    <input type="date" id="nacimiento" name="nacimiento" />
 
-    <label>Fecha de fallecimiento:</label>
-    <input type="date" id="deathDate" /><br/><br/>
-
-    <label>Enlace de canción (YouTube):</label>
-    <input type="url" id="songUrl" /><br/><br/>
-
-    <label>Imágenes (hasta 5):</label>
-    <input type="file" id="treeImages" multiple accept="image/*" /><br/><br/>
-
-    <button type="submit">Guardar árbol</button>
+    <label for="fallecimiento">Fecha de fallecimiento:</label>
+    <input type="date" id="fallecimiento" name="fallecimiento" />
   </form>
-  <p id="estado"></p>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <script>
+    const modeloSelector = document.getElementById('modelo');
+    const preview = document.getElementById('preview');
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
-      authDomain: "memorialapp-b1ccf.firebaseapp.com",
-      projectId: "memorialapp-b1ccf",
-      storageBucket: "memorialapp-b1ccf.appspot.com",
-      messagingSenderId: "931250217735",
-      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const modelViewer = document.getElementById("vistaModelo");
-    const estado = document.getElementById("estado");
+    const baseUrl = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
 
     function actualizarPreview() {
-      const modelo = document.getElementById("treeModel").value;
-      const url = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.appspot.com/o/modelos_3d%2F${encodeURIComponent(modelo)}?alt=media`;
-      modelViewer.src = url;
+      const filename = encodeURIComponent(modeloSelector.value);
+      preview.src = baseUrl + filename + "?alt=media";
     }
 
-    document.getElementById("treeModel").addEventListener("change", actualizarPreview);
-    actualizarPreview();
-
-    const subirImagenAlServidor = async (file, uid) => {
-      const formData = new FormData();
-      formData.append("archivo", file);
-
-      const response = await fetch("https://us-central1-memorialapp-b1ccf.cloudfunctions.net/subirImagen", {
-        method: "POST",
-        headers: { "x-user-id": uid },
-        body: formData
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error("El servidor devolvió una respuesta inválida.");
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al subir imagen");
-      }
-
-      return data.url;
-    };
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        estado.textContent = "Debes iniciar sesión.";
-        return;
-      }
-
-      document.getElementById("treeForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        estado.textContent = "Guardando árbol...";
-
-        const nombre = document.getElementById("treeName").value.trim();
-        const modelo = document.getElementById("treeModel").value;
-        const birthDate = document.getElementById("birthDate").value || null;
-        const deathDate = document.getElementById("deathDate").value || null;
-        const songUrl = document.getElementById("songUrl").value.trim() || null;
-
-        const files = document.getElementById("treeImages").files;
-        const imagenes = [];
-
-        try {
-          if (files.length > 5) throw new Error("Máximo 5 imágenes.");
-          for (let i = 0; i < files.length; i++) {
-            const url = await subirImagenAlServidor(files[i], user.uid);
-            imagenes.push(url);
-          }
-
-          await addDoc(collection(db, "arboles"), {
-            uid: user.uid,
-            nombre,
-            modelo,
-            birthDate,
-            deathDate,
-            songUrl,
-            imagenes,
-            creado: serverTimestamp()
-          });
-
-          estado.textContent = "🌳 Árbol creado exitosamente.";
-          document.getElementById("treeForm").reset();
-          actualizarPreview();
-        } catch (error) {
-          estado.textContent = "❌ Error: " + error.message;
-        }
-      });
-    });
+    modeloSelector.addEventListener("change", actualizarPreview);
+    window.addEventListener("load", actualizarPreview);
   </script>
 </body>
 </html>

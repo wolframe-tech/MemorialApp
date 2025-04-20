@@ -50,10 +50,17 @@
         body: formData
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error("El servidor devolvió una respuesta inválida");
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Error al subir imagen");
       }
+
       return data.url;
     };
 

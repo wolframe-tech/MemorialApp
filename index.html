@@ -8,49 +8,59 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyD6lhtmWaaXgbENV3AqiEmGRFiV7hVAWw8",
-      authDomain: "memorialapp-2f067.firebaseapp.com",
-      projectId: "memorialapp-2f067",
-      storageBucket: "memorialapp-2f067.firebasestorage.app",
-      messagingSenderId: "1022461847924",
-      appId: "1:1022461847924:web:6b06240c7e98094cb2e421",
-      measurementId: "G-J5Y7K6JHD3"
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.firebasestorage.app",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    // Registro con correo
+    async function saveUserData(user) {
+      const ref = doc(db, "usuarios", user.uid);
+      await setDoc(ref, {
+        uid: user.uid,
+        email: user.email,
+        creadoEn: serverTimestamp()
+      });
+    }
+
     window.register = async () => {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await saveUserData(result.user);
         alert("Usuario registrado exitosamente");
       } catch (error) {
         alert(error.message);
       }
     };
 
-    // Ingreso con correo
     window.login = async () => {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        await saveUserData(result.user);
         alert("Inicio de sesión exitoso");
       } catch (error) {
         alert(error.message);
       }
     };
 
-    // Ingreso con Google
     window.loginWithGoogle = async () => {
       const provider = new GoogleAuthProvider();
       try {
-        await signInWithPopup(auth, provider);
+        const result = await signInWithPopup(auth, provider);
+        await saveUserData(result.user);
         alert("Inicio de sesión con Google exitoso");
       } catch (error) {
         alert(error.message);

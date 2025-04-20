@@ -60,6 +60,28 @@
       }
     });
 
+    function calcularFechasRecordatorio(fechaStr, repetirAnualmente) {
+      const base = new Date(fechaStr);
+      const formato = (d) => d.toISOString().split("T")[0];
+
+      const mes1 = new Date(base);
+      mes1.setMonth(mes1.getMonth() + 1);
+
+      const mes6 = new Date(base);
+      mes6.setMonth(mes6.getMonth() + 6);
+
+      const anio1 = new Date(base);
+      anio1.setFullYear(anio1.getFullYear() + 1);
+
+      return {
+        mes1: formato(mes1),
+        mes6: formato(mes6),
+        anio1: formato(anio1),
+        repetirAnualmente,
+        aniversarioDesde: base.getFullYear()
+      };
+    }
+
     window.saveTree = async () => {
       const nombre = document.getElementById("nombre-arbol").value;
       const modelo = document.getElementById("modelo-arbol").value;
@@ -78,6 +100,8 @@
         return;
       }
 
+      const recordatorios = calcularFechasRecordatorio(fechaFallecimiento, recordatorioAnual);
+
       try {
         await addDoc(collection(db, "arboles"), {
           uid: currentUser.uid,
@@ -88,11 +112,12 @@
           fechaFallecimiento,
           recordatorioAnual,
           cancionYoutube,
+          recordatorios,
           creadoEn: serverTimestamp()
         });
 
         alert("Árbol guardado exitosamente.");
-        document.getElementById("tree-form").reset();
+        window.location.href = "galeria.html";
       } catch (error) {
         alert("Error al guardar: " + error.message);
       }

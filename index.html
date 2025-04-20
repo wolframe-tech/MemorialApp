@@ -35,7 +35,7 @@
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
       authDomain: "memorialapp-b1ccf.firebaseapp.com",
       projectId: "memorialapp-b1ccf",
-      storageBucket: "memorialapp-b1ccf.firebasestorage.app",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
       messagingSenderId: "931250217735",
       appId: "1:931250217735:web:a010fff296af35e6a41ba2"
     };
@@ -60,7 +60,7 @@
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(result.user);
         alert("Usuario registrado exitosamente");
-        window.location.href = "crear_arbol.html";
+        window.location.href = "galeria.html";
       } catch (error) {
         alert(error.message);
       }
@@ -73,7 +73,7 @@
         const result = await signInWithEmailAndPassword(auth, email, password);
         await saveUserData(result.user);
         alert("Inicio de sesión exitoso");
-        window.location.href = "crear_arbol.html";
+        window.location.href = "galeria.html";
       } catch (error) {
         alert(error.message);
       }
@@ -85,7 +85,7 @@
         const result = await signInWithPopup(auth, provider);
         await saveUserData(result.user);
         alert("Inicio de sesión con Google exitoso");
-        window.location.href = "crear_arbol.html";
+        window.location.href = "galeria.html";
       } catch (error) {
         alert(error.message);
       }

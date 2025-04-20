@@ -4,17 +4,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Prueba de Subida a Firebase Storage</title>
+  <title>Prueba Subida Firebase (CORS Fixed)</title>
 </head>
 <body>
-  <h2>Prueba de Subida de Imagen a Firebase</h2>
+  <h2>Prueba Subida Firebase (Nombre limpio + Tipo explícito)</h2>
   <input type="file" id="fileInput" accept="image/*" />
   <button onclick="subirImagen()">Subir Imagen</button>
   <p id="resultado"></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
@@ -30,7 +30,7 @@
     const auth = getAuth(app);
     const storage = getStorage(app);
 
-    // Autenticación rápida para probar
+    // Autenticación de prueba
     const email = "prueba@memorial.com";
     const password = "prueba123";
 
@@ -50,12 +50,14 @@
       }
 
       try {
-        const storageRef = ref(storage, `pruebas/${Date.now()}-${archivo.name}`);
-        const snapshot = await uploadBytes(storageRef, archivo);
+        const nombreSeguro = `${Date.now()}.jpg`; // nombre limpio
+        const storageRef = ref(storage, `pruebas/${nombreSeguro}`);
+        const metadata = { contentType: archivo.type };
+        const snapshot = await uploadBytes(storageRef, archivo, metadata);
         const url = await getDownloadURL(snapshot.ref);
-        document.getElementById("resultado").innerHTML = "Subida exitosa. URL: <a href='" + url + "' target='_blank'>" + url + "</a>";
+        document.getElementById("resultado").innerHTML = "✅ Subida exitosa: <a href='" + url + "' target='_blank'>" + url + "</a>";
       } catch (error) {
-        document.getElementById("resultado").textContent = "Error al subir: " + error.message;
+        document.getElementById("resultado").textContent = "❌ Error al subir: " + error.message;
       }
     };
   </script>

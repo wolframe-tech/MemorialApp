@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memorial App - Login</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6lhtmWaaXgbENV3AqiEmGRFiV7hVAWw8",
+      authDomain: "memorialapp-2f067.firebaseapp.com",
+      projectId: "memorialapp-2f067",
+      storageBucket: "memorialapp-2f067.firebasestorage.app",
+      messagingSenderId: "1022461847924",
+      appId: "1:1022461847924:web:6b06240c7e98094cb2e421",
+      measurementId: "G-J5Y7K6JHD3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Registro con correo
+    window.register = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert("Usuario registrado exitosamente");
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    // Ingreso con correo
+    window.login = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Inicio de sesión exitoso");
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    // Ingreso con Google
+    window.loginWithGoogle = async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+        alert("Inicio de sesión con Google exitoso");
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+  </script>
+</head>
+<body>
+  <h1>Memorial App</h1>
+  <input type="email" id="email" placeholder="Correo electrónico" />
+  <input type="password" id="password" placeholder="Contraseña" />
+  <button onclick="login()">Iniciar sesión</button>
+  <button onclick="register()">Registrarse</button>
+  <button onclick="loginWithGoogle()">Iniciar sesión con Google</button>
+</body>
+</html>

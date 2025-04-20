@@ -4,35 +4,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Memorial App - Galería de Árboles</title>
+  <title>Galería de Árboles</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 30px auto;
-      text-align: center;
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+    h2 { text-align: center; }
+    .galeria {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
     }
-    .tree-card {
-      border: 1px solid #ccc;
-      border-radius: 8px;
+    .arbol {
+      background: #fff;
+      border-radius: 12px;
       padding: 15px;
-      margin: 15px auto;
-      text-align: left;
-      background: #f9f9f9;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .tree-card h3 {
-      margin-top: 0;
+    model-viewer {
+      width: 100%;
+      height: 250px;
+      border-radius: 10px;
+      background-color: #eee;
     }
-    .btn {
-      padding: 10px 20px;
+    .info {
       margin-top: 10px;
+    }
+    .info p {
+      margin: 4px 0;
       font-size: 14px;
     }
+    iframe {
+      width: 100%;
+      height: 200px;
+      border: none;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+    .imagenes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .imagenes img {
+      width: 48%;
+      border-radius: 6px;
+    }
   </style>
+</head>
+<body>
+  <h2>Mis Árboles Conmemorativos</h2>
+  <div class="galeria" id="galeria"></div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
@@ -47,51 +74,52 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        alert("Debes iniciar sesión para ver tu galería.");
-        window.location.href = "/";
+    const contenedor = document.getElementById("galeria");
+
+    const baseModelURL = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
+
+    onAuthStateChanged(auth, async (usuario) => {
+      if (!usuario) {
+        contenedor.innerHTML = "<p>Debes iniciar sesión para ver tus árboles.</p>";
         return;
       }
 
-      document.getElementById("user-email").innerText = user.email;
-      const treeList = document.getElementById("tree-list");
-      const q = query(collection(db, "arboles"), where("uid", "==", user.uid));
-      const querySnapshot = await getDocs(q);
+      const q = query(
+        collection(db, "arboles"),
+        where("uid", "==", usuario.uid),
+        orderBy("creado", "desc")
+      );
 
-      if (querySnapshot.empty) {
-        treeList.innerHTML = "<p>No has creado ningún árbol todavía.</p>";
-      } else {
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const card = document.createElement("div");
-          card.className = "tree-card";
-          card.innerHTML = `
-            <h3>${data.nombre}</h3>
-            <p><strong>Modelo:</strong> ${data.modelo}</p>
-            <p><strong>Fecha nacimiento:</strong> ${data.fechaNacimiento || "No registrada"}</p>
-            <p><strong>Fecha fallecimiento:</strong> ${data.fechaFallecimiento}</p>
-            <p><strong>Recordatorio anual:</strong> ${data.recordatorioAnual ? "Sí" : "No"}</p>
-            <p><strong>Canción:</strong> ${data.cancionYoutube ? `<a href="${data.cancionYoutube}" target="_blank">Ver en YouTube</a>` : "No registrada"}</p>
-            <button class="btn" onclick="alert('Funcionalidad de vista aún no implementada')">Ver árbol</button>
-          `;
-          treeList.appendChild(card);
-        });
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        contenedor.innerHTML = "<p>Aún no has creado ningún árbol.</p>";
+        return;
       }
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const modelo = encodeURIComponent(data.modelo);
+        const video = data.cancion?.includes("youtube.com") || data.cancion?.includes("youtu.be")
+          ? '<iframe src="https://www.youtube.com/embed/' + (data.cancion.match(/(?:v=|\.be\/)([\w-]+)/)?.[1] || "") + '" allowfullscreen></iframe>'
+          : "";
+
+        const imagenesHTML = data.imagenes?.map(url => `<img src="${url}" alt="Foto conmemorativa">`).join("") || "";
+
+        contenedor.innerHTML += `
+          <div class="arbol">
+            <model-viewer src="${baseModelURL + modelo}?alt=media" camera-controls auto-rotate></model-viewer>
+            <div class="info">
+              <p><strong>${data.nombre}</strong></p>
+              <p>Nació: ${data.nacimiento || "-"}</p>
+              <p>Falleció: ${data.fallecimiento || "-"}</p>
+              ${video}
+              <div class="imagenes">${imagenesHTML}</div>
+            </div>
+          </div>
+        `;
+      });
     });
-
-    window.logout = async () => {
-      await signOut(auth);
-      window.location.href = "/";
-    };
   </script>
-</head>
-<body>
-  <h2>Galería de Árboles</h2>
-  <p>Bienvenido, <span id="user-email"></span></p>
-  <button onclick="logout()">Cerrar sesión</button>
-  <button onclick="window.location.href='crear_arbol.html'">Crear nuevo árbol</button>
-
-  <div id="tree-list"></div>
 </body>
 </html>

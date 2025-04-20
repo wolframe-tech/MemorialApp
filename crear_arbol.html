@@ -15,11 +15,18 @@
     .hidden {
       display: none;
     }
-    select, input, button {
-      margin-top: 10px;
+    input, select, button, label {
+      display: block;
+      margin: 10px auto;
       padding: 8px;
       width: 80%;
       max-width: 400px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
   </style>
   <script type="module">
@@ -56,8 +63,12 @@
     window.saveTree = async () => {
       const nombre = document.getElementById("nombre-arbol").value;
       const modelo = document.getElementById("modelo-arbol").value;
-      if (!nombre || !modelo) {
-        alert("Por favor completa todos los campos.");
+      const fechaNacimiento = document.getElementById("fecha-nacimiento").value;
+      const fechaFallecimiento = document.getElementById("fecha-fallecimiento").value;
+      const recordatorioAnual = document.getElementById("recordatorio-anual").checked;
+
+      if (!nombre || !modelo || !fechaFallecimiento) {
+        alert("Por favor completa todos los campos obligatorios.");
         return;
       }
 
@@ -67,6 +78,9 @@
           email: currentUser.email,
           nombre,
           modelo,
+          fechaNacimiento,
+          fechaFallecimiento,
+          recordatorioAnual,
           creadoEn: serverTimestamp()
         });
         alert("Árbol guardado exitosamente.");
@@ -89,12 +103,25 @@
 
   <div id="form-section" class="hidden">
     <form id="tree-form" onsubmit="event.preventDefault(); saveTree();">
-      <input type="text" id="nombre-arbol" placeholder="Nombre del árbol" required /><br />
+      <input type="text" id="nombre-arbol" placeholder="Nombre del árbol" required />
+      
       <select id="modelo-arbol" required>
         <option value="">Selecciona un modelo</option>
         <option value="pino">Pino</option>
         <option value="palma">Palma</option>
-      </select><br />
+      </select>
+
+      <label for="fecha-nacimiento">Fecha de nacimiento (opcional)</label>
+      <input type="date" id="fecha-nacimiento" />
+
+      <label for="fecha-fallecimiento">Fecha de fallecimiento *</label>
+      <input type="date" id="fecha-fallecimiento" required />
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="recordatorio-anual" />
+        Activar recordatorio anual
+      </label>
+
       <button type="submit">Guardar árbol</button>
     </form>
   </div>

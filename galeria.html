@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Galería Debug</title>
+  <title>Galería con Preview de Imágenes</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
@@ -35,17 +35,20 @@
     .imagenes {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
+      gap: 8px;
       margin-top: 10px;
     }
     .imagenes img {
       width: 48%;
+      height: auto;
       border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <h2>🧪 Galería Debug</h2>
+  <h2>🌳 Galería con Preview de Imágenes</h2>
   <div class="galeria" id="galeria"></div>
 
   <script type="module">
@@ -75,7 +78,7 @@
         return;
       }
 
-      console.log("🧪 Usuario autenticado:", usuario.uid);
+      console.log("👤 Usuario:", usuario.uid);
 
       const q = query(
         collection(db, "arboles"),
@@ -85,7 +88,7 @@
 
       try {
         const snapshot = await getDocs(q);
-        console.log("📦 Documentos encontrados:", snapshot.size);
+        console.log("📦 Documentos:", snapshot.size);
 
         if (snapshot.empty) {
           galeria.innerHTML = "<p>No hay árboles registrados para este usuario.</p>";
@@ -94,14 +97,18 @@
 
         snapshot.forEach(doc => {
           const data = doc.data();
-          console.log("🌳 Árbol cargado:", data);
+          console.log("🌳 Árbol:", data);
 
           const modelo = encodeURIComponent(data.modelo || "tree.glb");
           const video = data.cancion?.includes("youtube.com") || data.cancion?.includes("youtu.be")
             ? '<iframe src="https://www.youtube.com/embed/' + (data.cancion.match(/(?:v=|\.be\/)([\w-]+)/)?.[1] || "") + '" allowfullscreen></iframe>'
             : "";
 
-          const imagenesHTML = (data.imagenes || []).map(url => `<img src="${url}" alt="Foto">`).join("");
+          let imagenesHTML = "<p>No hay imágenes conmemorativas.</p>";
+          if (Array.isArray(data.imagenes) && data.imagenes.length > 0) {
+            console.log("🖼️ Imágenes:", data.imagenes);
+            imagenesHTML = data.imagenes.map(url => `<img src="${encodeURIComponent(url)}" alt="Foto del árbol">`).join("");
+          }
 
           galeria.innerHTML += `
             <div class="arbol">
@@ -115,8 +122,8 @@
           `;
         });
       } catch (error) {
-        console.error("🚨 Error consultando Firestore:", error);
-        galeria.innerHTML = "<p>Error cargando la galería. Revisa la consola.</p>";
+        console.error("🚨 Error al cargar la galería:", error);
+        galeria.innerHTML = "<p>Error al consultar Firestore.</p>";
       }
     });
   </script>

@@ -15,7 +15,7 @@
     .hidden {
       display: none;
     }
-    input, select, button, label {
+    input, select, button, label, textarea {
       display: block;
       margin: 10px auto;
       padding: 8px;
@@ -33,12 +33,13 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
       authDomain: "memorialapp-b1ccf.firebaseapp.com",
       projectId: "memorialapp-b1ccf",
-      storageBucket: "memorialapp-b1ccf.firebasestorage.app",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
       messagingSenderId: "931250217735",
       appId: "1:931250217735:web:a010fff296af35e6a41ba2"
     };
@@ -46,6 +47,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     let currentUser = null;
 
@@ -60,19 +62,41 @@
       }
     });
 
+    async function uploadPhotos(files) {
+      const urls = [];
+      for (let i = 0; i < files.length && i < 5; i++) {
+        const file = files[i];
+        const storageRef = ref(storage, `arboles/${currentUser.uid}/${Date.now()}-${file.name}`);
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        urls.push(downloadURL);
+      }
+      return urls;
+    }
+
     window.saveTree = async () => {
       const nombre = document.getElementById("nombre-arbol").value;
       const modelo = document.getElementById("modelo-arbol").value;
       const fechaNacimiento = document.getElementById("fecha-nacimiento").value;
       const fechaFallecimiento = document.getElementById("fecha-fallecimiento").value;
       const recordatorioAnual = document.getElementById("recordatorio-anual").checked;
+      const cancionYoutube = document.getElementById("cancion-youtube").value.trim();
+      const fotos = document.getElementById("fotos").files;
 
       if (!nombre || !modelo || !fechaFallecimiento) {
         alert("Por favor completa todos los campos obligatorios.");
         return;
       }
 
+      // Validar link de YouTube si está presente
+      if (cancionYoutube && !cancionYoutube.includes("youtube.com") && !cancionYoutube.includes("youtu.be")) {
+        alert("Por favor ingresa un enlace válido de YouTube.");
+        return;
+      }
+
       try {
+        const urls = await uploadPhotos(fotos);
+
         await addDoc(collection(db, "arboles"), {
           uid: currentUser.uid,
           email: currentUser.email,
@@ -81,8 +105,11 @@
           fechaNacimiento,
           fechaFallecimiento,
           recordatorioAnual,
+          cancionYoutube,
+          fotos: urls,
           creadoEn: serverTimestamp()
         });
+
         alert("Árbol guardado exitosamente.");
         document.getElementById("tree-form").reset();
       } catch (error) {
@@ -121,6 +148,12 @@
         <input type="checkbox" id="recordatorio-anual" />
         Activar recordatorio anual
       </label>
+
+      <label for="cancion-youtube">Canción conmemorativa (YouTube)</label>
+      <input type="url" id="cancion-youtube" placeholder="https://youtube.com/..." />
+
+      <label for="fotos">Subir hasta 5 fotos</label>
+      <input type="file" id="fotos" accept="image/*" multiple />
 
       <button type="submit">Guardar árbol</button>
     </form>

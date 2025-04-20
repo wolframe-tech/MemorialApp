@@ -137,7 +137,7 @@
         const storageRef = ref(storage, `${folderPath}/${Date.now()}-${files[i].name}`);
         const snapshot = await uploadBytes(storageRef, compressed);
         const url = await getDownloadURL(snapshot.ref);
-        urls.push(url);
+        urls.push(url); // ✅ solo se usan URLs firmadas
       }
       return urls;
     }

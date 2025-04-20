@@ -4,37 +4,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crear Árbol con Modelo 3D</title>
+  <title>Crear Árbol con Modelos Actualizados</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    model-viewer { width: 100%; height: 300px; border-radius: 10px; background: #f0f0f0; }
+  </style>
 </head>
 <body>
   <h2>Crear Árbol Conmemorativo</h2>
   <form id="treeForm">
-    <label>Nombre del árbol:</label><br/>
+    <label>Nombre del árbol:</label>
     <input type="text" id="treeName" required /><br/><br/>
 
-    <label>Modelo 3D:</label><br/>
+    <label>Selecciona un modelo 3D:</label>
     <select id="treeModel" required>
-      <option value="pine_tree (1).glb">Árbol Pino</option>
-      <option value="pine_tree (2).glb">Árbol Pino Ligero</option>
       <option value="tree_elm.glb">Árbol Olmo</option>
       <option value="ficus_bonsai.glb">Bonsái</option>
-      <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
       <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
+      <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
+      <option value="flowerpot.glb">Maceta</option>
     </select><br/><br/>
 
-    <model-viewer id="vistaModelo" src="" alt="Modelo 3D" camera-controls auto-rotate style="width: 100%; height: 300px;"></model-viewer><br/><br/>
+    <model-viewer id="vistaModelo" src="" alt="Vista previa del modelo 3D" camera-controls auto-rotate></model-viewer><br/><br/>
 
-    <label>Fecha de nacimiento:</label><br/>
+    <label>Fecha de nacimiento:</label>
     <input type="date" id="birthDate" /><br/><br/>
 
-    <label>Fecha de fallecimiento:</label><br/>
+    <label>Fecha de fallecimiento:</label>
     <input type="date" id="deathDate" /><br/><br/>
 
-    <label>Canción (enlace YouTube):</label><br/>
+    <label>Enlace de canción (YouTube):</label>
     <input type="url" id="songUrl" /><br/><br/>
 
-    <label>Imágenes (hasta 5):</label><br/>
+    <label>Imágenes (hasta 5):</label>
     <input type="file" id="treeImages" multiple accept="image/*" /><br/><br/>
 
     <button type="submit">Guardar árbol</button>
@@ -58,14 +61,14 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const modelViewer = document.getElementById("vistaModelo");
     const estado = document.getElementById("estado");
-    const vistaModelo = document.getElementById("vistaModelo");
 
-    const actualizarPreview = () => {
-      const archivo = document.getElementById("treeModel").value;
-      const url = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.appspot.com/o/modelos_3d%2F${encodeURIComponent(archivo)}?alt=media`;
-      vistaModelo.src = url;
-    };
+    function actualizarPreview() {
+      const modelo = document.getElementById("treeModel").value;
+      const url = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.appspot.com/o/modelos_3d%2F${encodeURIComponent(modelo)}?alt=media`;
+      modelViewer.src = url;
+    }
 
     document.getElementById("treeModel").addEventListener("change", actualizarPreview);
     actualizarPreview();

@@ -60,6 +60,7 @@
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await saveUserData(result.user);
         alert("Usuario registrado exitosamente");
+        window.location.href = "crear_arbol.html";
       } catch (error) {
         alert(error.message);
       }
@@ -72,6 +73,7 @@
         const result = await signInWithEmailAndPassword(auth, email, password);
         await saveUserData(result.user);
         alert("Inicio de sesión exitoso");
+        window.location.href = "crear_arbol.html";
       } catch (error) {
         alert(error.message);
       }
@@ -83,6 +85,7 @@
         const result = await signInWithPopup(auth, provider);
         await saveUserData(result.user);
         alert("Inicio de sesión con Google exitoso");
+        window.location.href = "crear_arbol.html";
       } catch (error) {
         alert(error.message);
       }
@@ -118,6 +121,7 @@
   <button onclick="login()">Iniciar sesión</button>
   <button onclick="register()">Registrarse</button>
   <button onclick="loginWithGoogle()">Iniciar sesión con Google</button>
+  <br /><br />
   <div class="link" onclick="showRecovery()">¿Olvidaste tu contraseña?</div>
 
   <div id="recovery-section">

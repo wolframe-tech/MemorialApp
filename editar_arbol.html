@@ -58,9 +58,9 @@
         if (data.imagenes?.length) {
           const contenedor = document.getElementById("previewImagenes");
           contenedor.innerHTML = "";
-          data.imagenes.forEach((url, index) => {
+          data.imagenes.forEach((url) => {
             const img = document.createElement("img");
-            img.src = url;
+            img.src = url;  // usamos la URL completa con token
             img.alt = "Imagen";
             img.style = "max-height:80px; margin-right:8px;";
 

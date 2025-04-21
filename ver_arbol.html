@@ -3,59 +3,75 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ver Árbol en RA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Árbol Conmemorativo</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; }
-    model-viewer { width: 100%; height: 80vh; background-color: #ddd; }
-    h2 { margin-top: 1rem; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    model-viewer {
+      width: 100%;
+      max-width: 600px;
+      height: 500px;
+      margin: auto;
+    }
   </style>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body>
-  <h2>Árbol Conmemorativo</h2>
-  <model-viewer id="viewer"
-    alt="Árbol 3D"
-    ar
-    ar-modes="scene-viewer webxr quick-look"
-    auto-rotate
-    camera-controls
-    ios-src=""
-    loading="lazy">
-  </model-viewer>
+  <h1>Árbol Conmemorativo</h1>
+  <div id="modelo3d">
+    <p>Cargando modelo...</p>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
       authDomain: "memorialapp-b1ccf.firebaseapp.com",
       projectId: "memorialapp-b1ccf",
-      storageBucket: "memorialapp-b1ccf.firebasestorage.app",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
       messagingSenderId: "931250217735",
       appId: "1:931250217735:web:a010fff296af35e6a41ba2"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
+    const arbolId = params.get("id");
 
     async function cargarModelo() {
-      if (!id) return;
-      const refArbol = doc(db, "arboles", id);
-      const snap = await getDoc(refArbol);
-      if (!snap.exists()) return;
+      const docRef = doc(db, "arboles", arbolId);
+      const docSnap = await getDoc(docRef);
 
-      const data = snap.data();
-      const modelo = data.modelo;
-      const viewer = document.getElementById("viewer");
-      const url = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${encodeURIComponent(modelo)}?alt=media`;
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const nombreModelo = data.modelo;
+        const modeloRef = ref(storage, `modelos_3d/${nombreModelo}`);
+        const modeloUrl = await getDownloadURL(modeloRef);
 
-      viewer.src = url;
-      viewer.setAttribute("ios-src", url); // Para iOS Quick Look
+        document.getElementById("modelo3d").innerHTML = `
+          <model-viewer
+            src="${modeloUrl}"
+            alt="Modelo del árbol"
+            ar
+            ar-modes="scene-viewer webxr quick-look"
+            auto-rotate
+            camera-controls
+            style="width: 100%; height: 500px;"
+          ></model-viewer>
+        `;
+      } else {
+        document.getElementById("modelo3d").innerText = "Árbol no encontrado.";
+      }
     }
 
     cargarModelo();

@@ -1,114 +1,48 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Árbol</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-    h2 { text-align: center; }
-    form {
-      max-width: 700px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    label { display: block; margin-top: 15px; font-weight: bold; }
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      margin-top: 20px;
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    model-viewer, iframe {
-      width: 100%;
-      height: 260px;
-      margin-top: 15px;
-      border-radius: 8px;
-    }
-    .imagenes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 15px;
-    }
-    .imagenes img {
-      width: 48%;
-      height: auto;
-      border-radius: 6px;
-      object-fit: cover;
-      border: 1px solid #ccc;
-    }
+    body { font-family: Arial; padding: 20px; }
+    label { display: block; margin-top: 10px; }
+    .img-preview-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .img-wrapper { position: relative; }
+    .img-wrapper img { width: 120px; border-radius: 6px; }
+    .img-wrapper button { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h2>✏️ Editar Árbol Conmemorativo</h2>
-  <form id="formularioEditar">
-    <label for="nombre">Nombre del árbol</label>
-    <input type="text" id="nombre" required />
+  <h2>Editar Árbol</h2>
+  <form id="formularioArbol">
+    <label>Nombre: <input type="text" id="nombreArbol" required /></label>
+    <label>Modelo 3D:
+      <select id="modelo3D"></select>
+    </label>
+    <model-viewer id="preview3D" style="width: 100%; height: 300px; background: #eee;" auto-rotate camera-controls></model-viewer>
 
-    <label for="modelo">Modelo 3D</label>
-    <select id="modelo">
-      <option value="jabami_anime_tree_v2.glb">🌳 Jabami</option>
-      <option value="low_poly_purple_flowers.glb">🌸 Purple Flowers</option>
-      <option value="fantasy_bonsai.glb">🌱 Bonsái</option>
-    </select>
-    <model-viewer id="vistaModelo" src="" camera-controls auto-rotate></model-viewer>
+    <label>Fecha de nacimiento: <input type="date" id="fechaNacimiento" /></label>
+    <label>Fecha de fallecimiento: <input type="date" id="fechaFallecimiento" /></label>
+    <label>Canción conmemorativa (YouTube): <input type="url" id="urlCancion" /></label>
+    <iframe id="youtubePlayer" width="100%" height="300" frameborder="0" allowfullscreen style="display:none;"></iframe>
 
-    <label for="nacimiento">Fecha de nacimiento</label>
-    <input type="date" id="nacimiento" />
+    <label>Agregar nuevas imágenes: <input type="file" id="imagenes" accept="image/*" multiple /></label>
+    <div class="img-preview-container" id="imagenesActuales"></div>
 
-    <label for="fallecimiento">Fecha de fallecimiento</label>
-    <input type="date" id="fallecimiento" />
-
-    <label for="cancion">Link de canción (YouTube)</label>
-    <input type="url" id="cancion" />
-    <iframe id="videoPreview" style="display:none;" allowfullscreen></iframe>
-
-    
-  <div class="imagenes" id="previewImagenes"></div>
-  <style>
-    .imagenes-contenedor { position: relative; display: inline-block; }
-    .imagenes-contenedor img { display: block; width: 100%; }
-    .btn-borrar {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      background: rgba(255, 0, 0, 0.7);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-  </style>
-
-
-    <button type="submit">Guardar cambios</button>
+    <button type="submit">Guardar Cambios</button>
   </form>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, getBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getFirestore, doc, getDoc, updateDoc, arrayRemove, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
@@ -123,111 +57,144 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
-    const modeloBaseURL = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
 
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
-    const form = document.getElementById("formularioEditar");
+    const idArbol = params.get("id");
+    let uid = null;
+    let arbolRef = null;
+    let imagenesGuardadas = [];
 
-    const cargarPreviewImagen = async (ruta) => {
-      try {
-        const refImg = ref(storage, ruta);
-        const bytes = await getBytes(refImg);
-        return URL.createObjectURL(new Blob([bytes]));
-      } catch (e) {
-        return null;
+    const modeloSelect = document.getElementById("modelo3D");
+    const preview = document.getElementById("preview3D");
+    const imagenesActuales = document.getElementById("imagenesActuales");
+    const player = document.getElementById("youtubePlayer");
+    const inputImagenes = document.getElementById("imagenes");
+
+    const modelos = [
+      { nombre: "Árbol estilo Anime", archivo: "jabami_anime_tree_v2.glb" },
+      { nombre: "Árbol con flores púrpura", archivo: "low_poly_purple_flowers.glb" },
+      { nombre: "Bonsái", archivo: "ficus_bonsai.glb" },
+      { nombre: "Maceta simple", archivo: "flowerpot.glb" },
+      { nombre: "Árbol clásico", archivo: "tree_elm.glb" },
+    ];
+
+    modelos.forEach(m => {
+      const option = document.createElement("option");
+      option.value = m.archivo;
+      option.textContent = m.nombre;
+      modeloSelect.appendChild(option);
+    });
+
+    modeloSelect.addEventListener("change", () => {
+      preview.src = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${modeloSelect.value}?alt=media`;
+    });
+
+    document.getElementById("urlCancion").addEventListener("input", e => {
+      const url = e.target.value;
+      if (url.includes("youtube")) {
+        const id = url.split("v=")[1]?.split("&")[0];
+        player.src = `https://www.youtube.com/embed/${id}`;
+        player.style.display = "block";
+      } else {
+        player.style.display = "none";
       }
-    };
+    });
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return alert("Debes iniciar sesión.");
-      const docRef = doc(db, "arboles", id);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) {
-        alert("Árbol no encontrado");
-        return;
-      }
-      const data = docSnap.data();
-      document.getElementById("nombre").value = data.nombre || "";
-      document.getElementById("modelo").value = data.modelo || "";
-      document.getElementById("nacimiento").value = data.nacimiento || "";
-      document.getElementById("fallecimiento").value = data.fallecimiento || "";
-      document.getElementById("cancion").value = data.cancion || "";
-
-      const modeloSel = encodeURIComponent(data.modelo || "jabami_anime_tree_v2.glb");
-      document.getElementById("vistaModelo").src = `${modeloBaseURL}${modeloSel}?alt=media`;
-
-      document.getElementById("modelo").addEventListener("change", (e) => {
-        const seleccionado = encodeURIComponent(e.target.value);
-        document.getElementById("vistaModelo").src = `${modeloBaseURL}${seleccionado}?alt=media`;
-      });
-
-      const cancionURL = data.cancion || "";
-      const match = cancionURL.match(/(?:v=|\.be\/)([\w-]+)/);
-      if (match && match[1]) {
-        document.getElementById("videoPreview").style.display = "block";
-        document.getElementById("videoPreview").src = `https://www.youtube.com/embed/${match[1]}`;
-      }
-
-      
-      const imagenesFinales = [];
-      if (Array.isArray(data.imagenes)) {
-
-        const contenedor = document.getElementById("previewImagenes");
-        for (const ruta of data.imagenes) {
-          const url = await cargarPreviewImagen(ruta);
-          if (url) {
-            const img = document.createElement("img");
-            img.src = url;
-            
-            const wrapper = document.createElement("div");
-            wrapper.className = "imagenes-contenedor";
-            wrapper.style.width = "48%";
-            wrapper.style.position = "relative";
-
-            const btn = document.createElement("button");
-            btn.className = "btn-borrar";
-            btn.innerHTML = "🗑️";
-            btn.onclick = async () => {
-              const confirmacion = confirm("¿Deseas eliminar esta imagen?");
-              if (confirmacion) {
-                try {
-                  const refImg = ref(storage, ruta);
-                  await deleteObject(refImg);
-                  wrapper.remove();
-                  console.log("🗑️ Imagen eliminada:", ruta);
-                } catch (e) {
-                  alert("❌ No se pudo eliminar esta imagen");
-                }
-              }
-            };
-
-            wrapper.appendChild(img);
-            wrapper.appendChild(btn);
-            contenedor.appendChild(wrapper);
-            imagenesFinales.push(ruta);
-
+    function renderizarImagenes() {
+      imagenesActuales.innerHTML = "";
+      imagenesGuardadas.forEach(img => {
+        const wrapper = document.createElement("div");
+        wrapper.classList.add("img-wrapper");
+        const imagen = document.createElement("img");
+        imagen.src = img;
+        const boton = document.createElement("button");
+        boton.textContent = "×";
+        boton.onclick = async () => {
+          if (confirm("¿Eliminar esta imagen?")) {
+            const token = await auth.currentUser.getIdToken();
+            const rutaInterna = decodeURIComponent(img.split("/o/")[1].split("?")[0]);
+            const res = await fetch("https://us-central1-memorialapp-b1ccf.cloudfunctions.net/eliminarImagen", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ ruta: rutaInterna })
+            });
+            if (res.ok) {
+              await updateDoc(arbolRef, { imagenes: arrayRemove(img) });
+              imagenesGuardadas = imagenesGuardadas.filter(i => i !== img);
+              renderizarImagenes();
+            } else {
+              alert("❌ No se pudo eliminar esta imagen");
+            }
           }
+        };
+        wrapper.appendChild(imagen);
+        wrapper.appendChild(boton);
+        imagenesActuales.appendChild(wrapper);
+      });
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        uid = user.uid;
+        arbolRef = doc(db, "arboles", idArbol);
+        const docSnap = await getDoc(arbolRef);
+        if (docSnap.exists() && docSnap.data().uid === uid) {
+          const data = docSnap.data();
+          document.getElementById("nombreArbol").value = data.nombre;
+          document.getElementById("modelo3D").value = data.modelo;
+          modeloSelect.dispatchEvent(new Event("change"));
+          document.getElementById("fechaNacimiento").value = data.nacimiento;
+          document.getElementById("fechaFallecimiento").value = data.fallecimiento;
+          document.getElementById("urlCancion").value = data.cancion;
+          document.getElementById("urlCancion").dispatchEvent(new Event("input"));
+          imagenesGuardadas = data.imagenes || [];
+          renderizarImagenes();
         }
       }
+    });
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        try {
-          await updateDoc(docRef, {
-            nombre: document.getElementById("nombre").value,
-            modelo: document.getElementById("modelo").value,
-            nacimiento: document.getElementById("nacimiento").value,
-            fallecimiento: document.getElementById("fallecimiento").value,
-            cancion: document.getElementById("cancion").value
-          });
-          alert("✅ Cambios guardados");
-          window.location.href = "galeria.html";
-        } catch (error) {
-          alert("❌ Error al guardar");
-          console.error(error);
+    async function subirNuevasImagenes(files) {
+      const nuevas = [];
+      for (const archivo of files) {
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        formData.append("uid", uid);
+
+        const res = await fetch("https://us-central1-memorialapp-b1ccf.cloudfunctions.net/subirImagen", {
+          method: "POST",
+          body: formData
+        });
+        if (res.ok) {
+          const datos = await res.json();
+          nuevas.push(`https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.appspot.com/o/${encodeURIComponent(datos.ruta)}?alt=media`);
         }
-      });
+      }
+      return nuevas;
+    }
+
+    document.getElementById("formularioArbol").addEventListener("submit", async e => {
+      e.preventDefault();
+      const nuevo = {
+        nombre: document.getElementById("nombreArbol").value,
+        modelo: modeloSelect.value,
+        nacimiento: document.getElementById("fechaNacimiento").value,
+        fallecimiento: document.getElementById("fechaFallecimiento").value,
+        cancion: document.getElementById("urlCancion").value,
+      };
+
+      await updateDoc(arbolRef, nuevo);
+
+      const nuevas = await subirNuevasImagenes(inputImagenes.files);
+      for (const url of nuevas) {
+        await updateDoc(arbolRef, { imagenes: arrayUnion(url) });
+        imagenesGuardadas.push(url);
+      }
+
+      renderizarImagenes();
+      alert("✅ Árbol actualizado con nuevas imágenes");
     });
   </script>
 </body>

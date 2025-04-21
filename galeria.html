@@ -185,6 +185,9 @@
               ${video}
               <div class="imagenes">${imagenesHTML}</div>
               <div class="acciones">
+                <button onclick="generarQR('${docId}')">📱 Ver en RA</button>
+                <div id="qr-${docId}" style="margin-top: 0.5rem;"></div>
+
                 <button class="btn-editar" onclick="window.location.href='editar_arbol.html?id=${docId}'">✏️ Editar</button>
                 <button class="btn-eliminar" onclick='eliminarArbol("${docId}", ${JSON.stringify(data.imagenes || [])})'>🗑️ Eliminar</button>
               </div>
@@ -199,5 +202,20 @@
 
   window.eliminarArbol = eliminarArbol;
   </script>
+
+<!-- Librería para generar QR -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+  function generarQR(id) {
+    const url = `https://memorial-app-snowy.vercel.app/ver_arbol.html?id=${id}`;
+    const contenedorQR = document.getElementById(`qr-${id}`);
+    contenedorQR.innerHTML = "";
+    QRCode.toCanvas(document.createElement("canvas"), url, { width: 128 }, function (error, canvas) {
+      if (error) console.error(error);
+      else contenedorQR.appendChild(canvas);
+    });
+  }
+</script>
+
 </body>
 </html>

@@ -3,45 +3,86 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Galería de Árboles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galería de Árboles - Acciones</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h2 { text-align: center; }
+    .galeria {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
     }
     .arbol {
-      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 12px;
       padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      position: relative;
     }
-    .arbol h3 {
-      margin-top: 0;
+    model-viewer {
+      width: 100%;
+      height: 250px;
+      border-radius: 10px;
+      background-color: #eee;
     }
-    button {
-      padding: 8px 16px;
-      margin-right: 10px;
+    iframe {
+      width: 100%;
+      height: 200px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    .imagenes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .imagenes img {
+      width: 48%;
+      height: auto;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid #ccc;
+    }
+    .acciones {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .acciones button {
+      flex: 1;
+      padding: 6px;
       border: none;
-      background-color: #4CAF50;
-      color: white;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #45a049;
+    .btn-editar { background: #ffc107; color: #000; }
+    .btn-eliminar { background: #dc3545; color: #fff; }
+    .btn-crear {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Mis Árboles Conmemorativos</h1>
-  <div id="contenedor-arboles"></div>
+  <h2>🌿 Galería de Árboles</h2>
+  <button class="btn-crear" onclick="window.location.href='crear_arbol.html'">➕ Crear nuevo árbol</button>
+  <div class="galeria" id="galeria"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getFirestore, collection, query, where, orderBy, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, getBytes, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
@@ -53,53 +94,110 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
     const storage = getStorage(app);
-    const contenedor = document.getElementById("contenedor-arboles");
+    const galeria = document.getElementById("galeria");
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const q = query(collection(db, "arboles"), where("uid", "==", user.uid), orderBy("creado", "desc"));
+    const baseModelURL = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
+
+    const cargarImagenSegura = async (ruta) => {
+      try {
+        const imagenRef = ref(storage, ruta);
+        const bytes = await getBytes(imagenRef);
+        return URL.createObjectURL(new Blob([bytes]));
+      } catch (error) {
+        console.error("❌ Error al cargar imagen segura:", ruta, error);
+        return null;
+      }
+    };
+
+    const eliminarArbol = async (docId, imagenes) => {
+      if (!confirm("¿Estás seguro de que deseas eliminar este árbol? Esta acción no se puede deshacer.")) return;
+      try {
+        // Eliminar imágenes en storage
+        if (Array.isArray(imagenes)) {
+          for (const ruta of imagenes) {
+            try {
+              const imgRef = ref(storage, ruta);
+              await deleteObject(imgRef);
+            } catch (err) {
+              console.warn("⚠️ No se pudo eliminar imagen:", ruta);
+            }
+          }
+        }
+        // Eliminar documento en firestore
+        await deleteDoc(doc(db, "arboles", docId));
+        alert("🌳 Árbol eliminado correctamente.");
+        window.location.reload();
+      } catch (error) {
+        alert("❌ Error al eliminar el árbol.");
+        console.error(error);
+      }
+    };
+
+    onAuthStateChanged(auth, async (usuario) => {
+      if (!usuario) {
+        galeria.innerHTML = "<p>No estás autenticado.</p>";
+        return;
+      }
+
+      const q = query(
+        collection(db, "arboles"),
+        where("uid", "==", usuario.uid),
+        orderBy("creado", "desc")
+      );
+
+      try {
         const snapshot = await getDocs(q);
 
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data();
-          const id = docSnap.id;
+        if (snapshot.empty) {
+          galeria.innerHTML = "<p>No hay árboles registrados para este usuario.</p>";
+          return;
+        }
 
-          const div = document.createElement("div");
-          div.classList.add("arbol");
-          div.innerHTML = `
-            <h3>${data.nombre}</h3>
-            <p><strong>Nacimiento:</strong> ${data.nacimiento}</p>
-            <p><strong>Fallecimiento:</strong> ${data.fallecimiento}</p>
-            <button onclick="location.href='ver_arbol.html?id=${id}'">Ver en RA</button>
-            <button onclick="location.href='editar_arbol.html?id=${id}'">Editar</button>
-            <button onclick="eliminarArbol('${id}', '${user.uid}', ${JSON.stringify(data.imagenes || [])})">Eliminar</button>
+        for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          const docId = docSnap.id;
+          const modelo = encodeURIComponent(data.modelo || "tree.glb");
+
+          const video = data.cancion?.includes("youtube.com") || data.cancion?.includes("youtu.be")
+            ? '<iframe src="https://www.youtube.com/embed/' + (data.cancion.match(/(?:v=|\.be\/)([\w-]+)/)?.[1] || "") + '" allowfullscreen></iframe>'
+            : "";
+
+          let imagenesHTML = "<p>No hay imágenes conmemorativas.</p>";
+          if (Array.isArray(data.imagenes) && data.imagenes.length > 0) {
+            const imagenURLs = await Promise.all(
+              data.imagenes.map(async (ruta) => {
+                const url = await cargarImagenSegura(ruta);
+                return url ? `<img src="${url}" alt="Foto">` : "";
+              })
+            );
+            imagenesHTML = imagenURLs.join("");
+          }
+
+          galeria.innerHTML += `
+            <div class="arbol">
+              <model-viewer src="${baseModelURL + modelo}?alt=media" camera-controls auto-rotate></model-viewer>
+              <p><strong>${data.nombre}</strong></p>
+              <p>🎂 Nacimiento: ${data.nacimiento || "-"}</p>
+              <p>🕯️ Fallecimiento: ${data.fallecimiento || "-"}</p>
+              ${video}
+              <div class="imagenes">${imagenesHTML}</div>
+              <div class="acciones">
+                <button class="btn-editar" onclick="window.location.href='editar_arbol.html?id=${docId}'">✏️ Editar</button>
+                <button class="btn-eliminar" onclick='eliminarArbol("${docId}", ${JSON.stringify(data.imagenes || [])})'>🗑️ Eliminar</button>
+              </div>
+            </div>
           `;
-          contenedor.appendChild(div);
-        });
-      } else {
-        window.location.href = "index.html";
+        }
+      } catch (error) {
+        console.error("🚨 Error al cargar galería:", error);
+        galeria.innerHTML = "<p>Error al cargar la galería.</p>";
       }
     });
 
-    window.eliminarArbol = async (id, uid, imagenes) => {
-      if (confirm("¿Estás seguro de que deseas eliminar este árbol?")) {
-        try {
-          for (let url of imagenes) {
-            const path = decodeURIComponent(new URL(url).pathname.split("/o/")[1].split("?")[0]);
-            await deleteObject(ref(storage, path));
-          }
-          await deleteDoc(doc(db, "arboles", id));
-          alert("Árbol eliminado exitosamente.");
-          location.reload();
-        } catch (error) {
-          console.error("Error eliminando árbol:", error);
-          alert("Error eliminando árbol.");
-        }
-      }
-    };
+  window.eliminarArbol = eliminarArbol;
   </script>
 </body>
 </html>

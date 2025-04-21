@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editar Árbol</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+    h2 { text-align: center; }
+    form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h2>✏️ Editar Árbol Conmemorativo</h2>
+  <form id="formularioEditar">
+    <label for="nombre">Nombre del árbol</label>
+    <input type="text" id="nombre" required />
+
+    <label for="modelo">Modelo 3D</label>
+    <select id="modelo">
+      <option value="jabami_anime_tree_v2.glb">🌳 Jabami</option>
+      <option value="low_poly_purple_flowers.glb">🌸 Purple Flowers</option>
+      <option value="fantasy_bonsai.glb">🌱 Bonsái</option>
+    </select>
+
+    <label for="nacimiento">Fecha de nacimiento</label>
+    <input type="date" id="nacimiento" />
+
+    <label for="fallecimiento">Fecha de fallecimiento</label>
+    <input type="date" id="fallecimiento" />
+
+    <label for="cancion">Link de canción (YouTube)</label>
+    <input type="url" id="cancion" />
+
+    <button type="submit">Guardar cambios</button>
+  </form>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    const form = document.getElementById("formularioEditar");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return alert("Debes iniciar sesión.");
+      const docRef = doc(db, "arboles", id);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        alert("Árbol no encontrado");
+        return;
+      }
+      const data = docSnap.data();
+      document.getElementById("nombre").value = data.nombre || "";
+      document.getElementById("modelo").value = data.modelo || "";
+      document.getElementById("nacimiento").value = data.nacimiento || "";
+      document.getElementById("fallecimiento").value = data.fallecimiento || "";
+      document.getElementById("cancion").value = data.cancion || "";
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await updateDoc(docRef, {
+            nombre: document.getElementById("nombre").value,
+            modelo: document.getElementById("modelo").value,
+            nacimiento: document.getElementById("nacimiento").value,
+            fallecimiento: document.getElementById("fallecimiento").value,
+            cancion: document.getElementById("cancion").value
+          });
+          alert("✅ Cambios guardados");
+          window.location.href = "galeria.html";
+        } catch (error) {
+          alert("❌ Error al guardar");
+          console.error(error);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

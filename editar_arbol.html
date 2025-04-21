@@ -1,60 +1,126 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Árbol</title>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    label { font-weight: bold; display: block; margin-top: 15px; }
-    img { height: 80px; margin-right: 10px; border-radius: 6px; }
-    .imagen { display: inline-block; position: relative; margin: 10px 10px 0 0; }
-    .imagen button {
-      position: absolute; top: -8px; right: -8px;
-      background: red; color: white; border: none;
-      border-radius: 50%; width: 24px; height: 24px; cursor: pointer;
-    }
-    iframe { width: 100%; height: 200px; margin-top: 10px; border-radius: 10px; }
-    model-viewer { width: 100%; height: 300px; background: #f1f1f1; border-radius: 10px; margin-top: 10px; }
+    .imagen { display: inline-block; margin: 10px; text-align: center; }
+    .imagen img { max-width: 100px; height: auto; display: block; }
+    .imagen button { margin-top: 5px; }
   </style>
 </head>
 <body>
   <h2>Editar Árbol</h2>
-  <form id="editForm">
-    <label>Nombre del árbol: <input type="text" id="nombre" required></label>
+  <form id="formulario">
+    <label>Nombre: <input type="text" id="nombre"></label><br>
     <label>Modelo 3D:
-      <select id="modelo">
+      <select id="modelo" onchange="cambiarPreview()">
         <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
         <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
-        <option value="tree_elm.glb">Olmo</option>
+        <option value="flowerpot.glb">Maceta simple</option>
         <option value="ficus_bonsai.glb">Ficus Bonsai</option>
-        <option value="flowerpot.glb">Maceta clásica</option>
+        <option value="tree_elm.glb">Olmo</option>
       </select>
-    </label>
-    <model-viewer id="preview" alt="Vista previa" auto-rotate camera-controls></model-viewer>
+    </label><br>
+    <model-viewer id="preview" alt="Modelo 3D" auto-rotate camera-controls style="width: 100%; height: 300px; background: #f0f0f0;"></model-viewer>
 
-    <label>Fecha de nacimiento: <input type="date" id="nacimiento" required></label>
-    <label>Fecha de fallecimiento: <input type="date" id="fallecimiento" required></label>
-    <label>Canción conmemorativa (YouTube): <input type="text" id="cancion"></label>
-    <iframe id="youtubeFrame" frameborder="0" allowfullscreen></iframe>
+    <label>Fecha de nacimiento: <input type="date" id="nacimiento"></label><br>
+    <label>Fecha de fallecimiento: <input type="date" id="fallecimiento"></label><br>
+    <label>Canción conmemorativa (YouTube): <input type="text" id="cancion"></label><br>
+    <iframe id="youtubeFrame" width="360" height="215" frameborder="0" allowfullscreen></iframe>
 
-    <label>Imágenes actuales:</label>
+    <h4>Imágenes actuales:</h4>
     <div id="imagenesActuales"></div>
 
-    <label>Agregar nuevas imágenes:
-      <input type="file" id="imagenesNuevas" accept="image/*" multiple>
-    </label>
+    <h4>Agregar nuevas imágenes:</h4>
+    <input type="file" id="imagenes" accept="image/*" multiple><br>
 
-    <br><br>
     <button type="submit">Guardar Cambios</button>
   </form>
 
-  <script type="module" src="./editar_arbol_logic.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.firebasestorage.app",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const idArbol = urlParams.get('id');
+
+    async function cargarDatos() {
+      if (!idArbol) return;
+      const refArbol = doc(db, "arboles", idArbol);
+      const snap = await getDoc(refArbol);
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      document.getElementById("nombre").value = data.nombre || "";
+      document.getElementById("modelo").value = data.modelo;
+      document.getElementById("nacimiento").value = data.nacimiento;
+      document.getElementById("fallecimiento").value = data.fallecimiento;
+      document.getElementById("cancion").value = data.cancion;
+      cambiarPreview();
+
+      if (data.cancion?.includes("youtu")) {
+        const idVideo = data.cancion.split("v=")[1]?.split("&")[0] || data.cancion.split("/").pop();
+        document.getElementById("youtubeFrame").src = `https://www.youtube.com/embed/${idVideo}`;
+      }
+
+      const contenedor = document.getElementById("imagenesActuales");
+      contenedor.innerHTML = "";
+      (data.imagenes || []).forEach((url, index) => {
+        const div = document.createElement("div");
+        div.className = "imagen";
+        div.innerHTML = `
+          <img src="${url}" alt="Imagen conmemorativa">
+          <button type="button" onclick="eliminarImagen('${url}')">🗑</button>
+        `;
+        contenedor.appendChild(div);
+      });
+    }
+
+    window.eliminarImagen = async (url) => {
+      if (!confirm("¿Deseas eliminar esta imagen?")) return;
+      const decoded = decodeURIComponent(url.split("/o/")[1].split("?")[0]);
+      try {
+        await deleteObject(ref(storage, decoded));
+        const refArbol = doc(db, "arboles", idArbol);
+        const snap = await getDoc(refArbol);
+        const imgs = snap.data().imagenes.filter(i => i !== url);
+        await updateDoc(refArbol, { imagenes: imgs });
+        location.reload();
+      } catch (e) {
+        alert("Error eliminando la imagen.");
+        console.error(e);
+      }
+    }
+
+    window.cambiarPreview = () => {
+      const modelo = document.getElementById("modelo").value;
+      const viewer = document.getElementById("preview");
+      viewer.src = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${encodeURIComponent(modelo)}?alt=media`;
+    }
+
+    cargarDatos();
+  </script>
 </body>
 </html>

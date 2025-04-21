@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ver Árbol en RA</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; }
+    model-viewer { width: 100%; height: 80vh; background-color: #ddd; }
+    h2 { margin-top: 1rem; }
+  </style>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
+</head>
+<body>
+  <h2>Árbol Conmemorativo</h2>
+  <model-viewer id="viewer"
+    alt="Árbol 3D"
+    ar
+    ar-modes="scene-viewer webxr quick-look"
+    auto-rotate
+    camera-controls
+    ios-src=""
+    loading="lazy">
+  </model-viewer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.firebasestorage.app",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    async function cargarModelo() {
+      if (!id) return;
+      const refArbol = doc(db, "arboles", id);
+      const snap = await getDoc(refArbol);
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      const modelo = data.modelo;
+      const viewer = document.getElementById("viewer");
+      const url = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${encodeURIComponent(modelo)}?alt=media`;
+
+      viewer.src = url;
+      viewer.setAttribute("ios-src", url); // Para iOS Quick Look
+    }
+
+    cargarModelo();
+  </script>
+</body>
+</html>

@@ -3,12 +3,86 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Editar Árbol Conmemorativo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galería de Árboles - Acciones</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h2 { text-align: center; }
+    .galeria {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .arbol {
+      background: #fff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    model-viewer {
+      width: 100%;
+      height: 250px;
+      border-radius: 10px;
+      background-color: #eee;
+    }
+    iframe {
+      width: 100%;
+      height: 200px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    .imagenes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .imagenes img {
+      width: 48%;
+      height: auto;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid #ccc;
+    }
+    .acciones {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .acciones button {
+      flex: 1;
+      padding: 6px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-editar { background: #ffc107; color: #000; }
+    .btn-eliminar { background: #dc3545; color: #fff; }
+    .btn-crear {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>🌿 Galería de Árboles</h2>
+  <button class="btn-crear" onclick="window.location.href='crear_arbol.html'">➕ Crear nuevo árbol</button>
+  <div class="galeria" id="galeria"></div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getFirestore, collection, query, where, orderBy, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, getBytes, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
@@ -22,148 +96,108 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app, "gs://memorialapp-b1ccf.firebasestorage.app");
+    const storage = getStorage(app);
+    const galeria = document.getElementById("galeria");
 
-    let arbolId = new URLSearchParams(window.location.search).get("id");
-    let currentUser;
+    const baseModelURL = "https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F";
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        await cargarDatos();
-      } else {
-        alert("No autenticado");
-        window.location.href = "index.html";
+    const cargarImagenSegura = async (ruta) => {
+      try {
+        const imagenRef = ref(storage, ruta);
+        const bytes = await getBytes(imagenRef);
+        return URL.createObjectURL(new Blob([bytes]));
+      } catch (error) {
+        console.error("❌ Error al cargar imagen segura:", ruta, error);
+        return null;
+      }
+    };
+
+    const eliminarArbol = async (docId, imagenes) => {
+      if (!confirm("¿Estás seguro de que deseas eliminar este árbol? Esta acción no se puede deshacer.")) return;
+      try {
+        // Eliminar imágenes en storage
+        if (Array.isArray(imagenes)) {
+          for (const ruta of imagenes) {
+            try {
+              const imgRef = ref(storage, ruta);
+              await deleteObject(imgRef);
+            } catch (err) {
+              console.warn("⚠️ No se pudo eliminar imagen:", ruta);
+            }
+          }
+        }
+        // Eliminar documento en firestore
+        await deleteDoc(doc(db, "arboles", docId));
+        alert("🌳 Árbol eliminado correctamente.");
+        window.location.reload();
+      } catch (error) {
+        alert("❌ Error al eliminar el árbol.");
+        console.error(error);
+      }
+    };
+
+    onAuthStateChanged(auth, async (usuario) => {
+      if (!usuario) {
+        galeria.innerHTML = "<p>No estás autenticado.</p>";
+        return;
+      }
+
+      const q = query(
+        collection(db, "arboles"),
+        where("uid", "==", usuario.uid),
+        orderBy("creado", "desc")
+      );
+
+      try {
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          galeria.innerHTML = "<p>No hay árboles registrados para este usuario.</p>";
+          return;
+        }
+
+        for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          const docId = docSnap.id;
+          const modelo = encodeURIComponent(data.modelo || "tree.glb");
+
+          const video = data.cancion?.includes("youtube.com") || data.cancion?.includes("youtu.be")
+            ? '<iframe src="https://www.youtube.com/embed/' + (data.cancion.match(/(?:v=|\.be\/)([\w-]+)/)?.[1] || "") + '" allowfullscreen></iframe>'
+            : "";
+
+          let imagenesHTML = "<p>No hay imágenes conmemorativas.</p>";
+          if (Array.isArray(data.imagenes) && data.imagenes.length > 0) {
+            const imagenURLs = await Promise.all(
+              data.imagenes.map(async (ruta) => {
+                const url = await cargarImagenSegura(ruta);
+                return url ? `<img src="${url}" alt="Foto">` : "";
+              })
+            );
+            imagenesHTML = imagenURLs.join("");
+          }
+
+          galeria.innerHTML += `
+            <div class="arbol">
+              <model-viewer src="${baseModelURL + modelo}?alt=media" camera-controls auto-rotate></model-viewer>
+              <p><strong>${data.nombre}</strong></p>
+              <p>🎂 Nacimiento: ${data.nacimiento || "-"}</p>
+              <p>🕯️ Fallecimiento: ${data.fallecimiento || "-"}</p>
+              ${video}
+              <div class="imagenes">${imagenesHTML}</div>
+              <div class="acciones">
+                <button class="btn-editar" onclick="window.location.href='editar_arbol.html?id=${docId}'">✏️ Editar</button>
+                <button class="btn-eliminar" onclick='eliminarArbol("${docId}", ${JSON.stringify(data.imagenes || [])})'>🗑️ Eliminar</button>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error("🚨 Error al cargar galería:", error);
+        galeria.innerHTML = "<p>Error al cargar la galería.</p>";
       }
     });
 
-    async function cargarDatos() {
-      const docRef = doc(db, "arboles", arbolId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        document.getElementById("nombre").value = data.nombre || "";
-        document.getElementById("modelo").value = data.modelo || "";
-        document.getElementById("nacimiento").value = data.nacimiento || "";
-        document.getElementById("fallecimiento").value = data.fallecimiento || "";
-        document.getElementById("cancion").value = data.cancion || "";
-
-        actualizarModelo(data.modelo);
-
-        if (data.cancion) {
-          const videoId = new URL(data.cancion).searchParams.get("v") || data.cancion.split("/").pop();
-          document.getElementById("previewCancion").innerHTML = `
-            <iframe width="300" height="170" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
-        }
-
-        const contenedor = document.getElementById("previewImagenes");
-        contenedor.innerHTML = "";
-        (data.imagenes || []).forEach((url) => {
-          const img = document.createElement("img");
-          img.src = url;
-          img.alt = "Imagen";
-          img.style = "max-height:80px; margin: 10px; display: block;";
-
-          const btn = document.createElement("button");
-          btn.textContent = "🗑️";
-          btn.onclick = () => eliminarImagen(url);
-
-          const div = document.createElement("div");
-          div.style.display = "inline-block";
-          div.style.textAlign = "center";
-          div.appendChild(img);
-          div.appendChild(btn);
-          contenedor.appendChild(div);
-        });
-      }
-    }
-
-    window.actualizarModelo = (modelo) => {
-      document.getElementById("previewModelo").innerHTML = `
-        <model-viewer src="https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${modelo}?alt=media" 
-        camera-controls auto-rotate ar style="width:100%; height:300px;"></model-viewer>`;
-    };
-
-    window.eliminarImagen = async (url) => {
-      if (!confirm("¿Eliminar esta imagen?")) return;
-      try {
-        const path = decodeURIComponent(new URL(url).pathname.split("/o/")[1].split("?")[0]);
-        await deleteObject(ref(storage, path));
-
-        const docRef = doc(db, "arboles", arbolId);
-        const docSnap = await getDoc(docRef);
-        const imagenes = docSnap.data().imagenes.filter(img => img !== url);
-        await updateDoc(docRef, { imagenes });
-
-        location.reload();
-      } catch (e) {
-        alert("❌ No se pudo eliminar esta imagen");
-        console.error(e);
-      }
-    };
-
-    window.guardarCambios = async () => {
-      const nombre = document.getElementById("nombre").value.trim();
-      const modelo = document.getElementById("modelo").value;
-      const nacimiento = document.getElementById("nacimiento").value;
-      const fallecimiento = document.getElementById("fallecimiento").value;
-      const cancion = document.getElementById("cancion").value.trim();
-
-      if (!nombre || !modelo) return alert("Faltan datos requeridos");
-
-      const docRef = doc(db, "arboles", arbolId);
-      const docSnap = await getDoc(docRef);
-      const data = docSnap.data();
-      const nuevasImagenes = [];
-
-      const archivos = document.getElementById("imagenes").files;
-      for (const archivo of archivos) {
-        const refImg = ref(storage, `arboles/${currentUser.uid}/${Date.now()}_${archivo.name}`);
-        await uploadBytes(refImg, archivo);
-        const url = await getDownloadURL(refImg);
-        nuevasImagenes.push(url);
-      }
-
-      await updateDoc(docRef, {
-        nombre,
-        modelo,
-        nacimiento,
-        fallecimiento,
-        cancion,
-        imagenes: [...(data.imagenes || []), ...nuevasImagenes]
-      });
-
-      alert("✅ Cambios guardados");
-      location.reload();
-    };
+  window.eliminarArbol = eliminarArbol;
   </script>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
-</head>
-<body>
-  <h2>Editar Árbol</h2>
-  <label>Nombre: <input id="nombre" /></label><br/>
-  <label>Modelo 3D:
-    <select id="modelo" onchange="actualizarModelo(this.value)">
-      <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
-      <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
-      <option value="ficus_bonsai.glb">Ficus Bonsai</option>
-      <option value="flowerpot.glb">Maceta simple</option>
-      <option value="tree_elm.glb">Olmo realista</option>
-    </select>
-  </label>
-  <div id="previewModelo" style="margin-top:10px;"></div>
-
-  <br/>
-  <label>Fecha de nacimiento: <input type="date" id="nacimiento" /></label><br/>
-  <label>Fecha de fallecimiento: <input type="date" id="fallecimiento" /></label><br/>
-  <label>Canción conmemorativa (YouTube): <input id="cancion" /></label>
-  <div id="previewCancion" style="margin-top:10px;"></div>
-
-  <h4>Imágenes actuales:</h4>
-  <div id="previewImagenes"></div>
-
-  <h4>Agregar nuevas imágenes:</h4>
-  <input type="file" id="imagenes" accept="image/*" multiple /><br/><br/>
-  <button onclick="guardarCambios()">Guardar Cambios</button>
 </body>
 </html>

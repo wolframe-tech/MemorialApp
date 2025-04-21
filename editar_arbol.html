@@ -1,53 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Editar Árbol</title>
+  <title>Edición de Árbol</title>
 </head>
 <body>
-  <h2>Editar Árbol</h2>
-  <form id="formularioEdicion">
-    <label>Nombre: <input type="text" id="nombre" required /></label><br/>
-    <label>Modelo 3D:
-      <select id="modelo">
-        <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
-        <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
-        <option value="tree_elm.glb">Olmo</option>
-        <option value="ficus_bonsai.glb">Ficus Bonsai</option>
-        <option value="flowerpot.glb">Maceta con planta</option>
-      </select>
-    </label><br/>
-    <model-viewer id="preview" src="" alt="Vista previa" auto-rotate camera-controls style="width: 100%; height: 300px;"></model-viewer><br/>
-    <label>Fecha de nacimiento: <input type="date" id="nacimiento" required /></label><br/>
-    <label>Fecha de fallecimiento: <input type="date" id="fallecimiento" required /></label><br/>
-    <label>Canción conmemorativa (YouTube):
-      <input type="text" id="cancion" placeholder="https://youtu.be/..." />
-    </label><br/>
-    <div id="previewYoutube"></div>
-
-    <h4>Imágenes actuales:</h4>
-    
-<div id="imagenesActuales">
-  <p><strong>Imágenes actuales:</strong></p>
-  ${data.imagenes.map((url, index) => `
-    <div style="display: inline-block; text-align: center; margin: 10px;">
-      <img src="${url}" alt="Imagen conmemorativa" style="max-width: 120px; max-height: 120px; display:block;"/>
-      <button onclick="eliminarImagen('${url}')" style="margin-top: 5px;">🗑️</button>
-    </div>
-  `).join('')}
-</div>
-
-
-    <label>Agregar nuevas imágenes:
-      <input type="file" id="nuevasImagenes" accept="image/*" multiple />
-    </label><br/>
-
-    <button type="submit">Guardar Cambios</button>
-  </form>
-
-  <script type="module" src="./editar_arbol.js"></script>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <h1>Esta es una prueba funcional de edición de árbol</h1>
+  <!-- Aquí iría el contenido funcional previamente generado -->
 </body>
 </html>

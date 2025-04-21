@@ -1,16 +1,17 @@
 
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Editar Árbol</title>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>
+<meta charset="utf-8"/>
+<title>Editar Árbol</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" type="module"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" type="module"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js" type="module"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js" type="module"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js" type="module"></script>
+<script src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js" type="module"></script>
+<style>
     body { font-family: sans-serif; padding: 1rem; }
     model-viewer { width: 100%; height: 300px; background: #eee; }
     .imagen-container { display: inline-block; position: relative; margin: 5px; }
@@ -19,30 +20,25 @@
   </style>
 </head>
 <body>
-  <h2>Editar Árbol</h2>
-  <form id="formEditar">
-    <label>Nombre:<br><input type="text" id="nombre" required></label><br><br>
-    <label>Modelo 3D:<br>
-      <select id="modelo3D"></select>
-    </label><br><br>
-
-    <model-viewer id="preview3D" camera-controls auto-rotate></model-viewer><br><br>
-
-    <label>Fecha de nacimiento:<br><input type="date" id="nacimiento"></label><br><br>
-    <label>Fecha de fallecimiento:<br><input type="date" id="fallecimiento"></label><br><br>
-    <label>Canción conmemorativa (YouTube):<br><input type="text" id="cancion"></label><br><br>
-    <div id="videoPreview"></div><br>
-
-    <div>
-      <label>Imágenes actuales:</label>
-      <div id="imagenesActuales"></div>
-    </div><br>
-
-    <label>Agregar nuevas imágenes:<br><input type="file" id="imagenesNuevas" accept="image/*" multiple></label><br><br>
-    <button type="submit">Guardar Cambios</button>
-  </form>
-
-  <script type="module">
+<h2>Editar Árbol</h2>
+<form id="formEditar">
+<label>Nombre:<br/><input id="nombre" required="" type="text"/></label><br/><br/>
+<label>Modelo 3D:<br/>
+<select id="modelo3D"></select>
+</label><br/><br/>
+<model-viewer auto-rotate="" camera-controls="" id="preview3D"></model-viewer><br/><br/>
+<label>Fecha de nacimiento:<br/><input id="nacimiento" type="date"/></label><br/><br/>
+<label>Fecha de fallecimiento:<br/><input id="fallecimiento" type="date"/></label><br/><br/>
+<label>Canción conmemorativa (YouTube):<br/><input id="cancion" type="text"/></label><br/><br/>
+<div id="videoPreview"></div><br/>
+<div>
+<label>Imágenes actuales:</label>
+<div id="imagenesActuales"></div>
+</div><br/>
+<label>Agregar nuevas imágenes:<br/><input accept="image/*" id="imagenesNuevas" multiple="" type="file"/></label><br/><br/>
+<button type="submit">Guardar Cambios</button>
+</form>
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, updateDoc, arrayRemove, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";

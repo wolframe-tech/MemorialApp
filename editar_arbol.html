@@ -1,11 +1,169 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Edición de Árbol</title>
+  <title>Editar Árbol Conmemorativo</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app, "gs://memorialapp-b1ccf.firebasestorage.app");
+
+    let arbolId = new URLSearchParams(window.location.search).get("id");
+    let currentUser;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        await cargarDatos();
+      } else {
+        alert("No autenticado");
+        window.location.href = "index.html";
+      }
+    });
+
+    async function cargarDatos() {
+      const docRef = doc(db, "arboles", arbolId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        document.getElementById("nombre").value = data.nombre || "";
+        document.getElementById("modelo").value = data.modelo || "";
+        document.getElementById("nacimiento").value = data.nacimiento || "";
+        document.getElementById("fallecimiento").value = data.fallecimiento || "";
+        document.getElementById("cancion").value = data.cancion || "";
+
+        actualizarModelo(data.modelo);
+
+        if (data.cancion) {
+          const videoId = new URL(data.cancion).searchParams.get("v") || data.cancion.split("/").pop();
+          document.getElementById("previewCancion").innerHTML = `
+            <iframe width="300" height="170" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        }
+
+        const contenedor = document.getElementById("previewImagenes");
+        contenedor.innerHTML = "";
+        (data.imagenes || []).forEach((url) => {
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = "Imagen";
+          img.style = "max-height:80px; margin: 10px; display: block;";
+
+          const btn = document.createElement("button");
+          btn.textContent = "🗑️";
+          btn.onclick = () => eliminarImagen(url);
+
+          const div = document.createElement("div");
+          div.style.display = "inline-block";
+          div.style.textAlign = "center";
+          div.appendChild(img);
+          div.appendChild(btn);
+          contenedor.appendChild(div);
+        });
+      }
+    }
+
+    window.actualizarModelo = (modelo) => {
+      document.getElementById("previewModelo").innerHTML = `
+        <model-viewer src="https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${modelo}?alt=media" 
+        camera-controls auto-rotate ar style="width:100%; height:300px;"></model-viewer>`;
+    };
+
+    window.eliminarImagen = async (url) => {
+      if (!confirm("¿Eliminar esta imagen?")) return;
+      try {
+        const path = decodeURIComponent(new URL(url).pathname.split("/o/")[1].split("?")[0]);
+        await deleteObject(ref(storage, path));
+
+        const docRef = doc(db, "arboles", arbolId);
+        const docSnap = await getDoc(docRef);
+        const imagenes = docSnap.data().imagenes.filter(img => img !== url);
+        await updateDoc(docRef, { imagenes });
+
+        location.reload();
+      } catch (e) {
+        alert("❌ No se pudo eliminar esta imagen");
+        console.error(e);
+      }
+    };
+
+    window.guardarCambios = async () => {
+      const nombre = document.getElementById("nombre").value.trim();
+      const modelo = document.getElementById("modelo").value;
+      const nacimiento = document.getElementById("nacimiento").value;
+      const fallecimiento = document.getElementById("fallecimiento").value;
+      const cancion = document.getElementById("cancion").value.trim();
+
+      if (!nombre || !modelo) return alert("Faltan datos requeridos");
+
+      const docRef = doc(db, "arboles", arbolId);
+      const docSnap = await getDoc(docRef);
+      const data = docSnap.data();
+      const nuevasImagenes = [];
+
+      const archivos = document.getElementById("imagenes").files;
+      for (const archivo of archivos) {
+        const refImg = ref(storage, `arboles/${currentUser.uid}/${Date.now()}_${archivo.name}`);
+        await uploadBytes(refImg, archivo);
+        const url = await getDownloadURL(refImg);
+        nuevasImagenes.push(url);
+      }
+
+      await updateDoc(docRef, {
+        nombre,
+        modelo,
+        nacimiento,
+        fallecimiento,
+        cancion,
+        imagenes: [...(data.imagenes || []), ...nuevasImagenes]
+      });
+
+      alert("✅ Cambios guardados");
+      location.reload();
+    };
+  </script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body>
-  <h1>Esta es una prueba funcional de edición de árbol</h1>
-  <!-- Aquí iría el contenido funcional previamente generado -->
+  <h2>Editar Árbol</h2>
+  <label>Nombre: <input id="nombre" /></label><br/>
+  <label>Modelo 3D:
+    <select id="modelo" onchange="actualizarModelo(this.value)">
+      <option value="jabami_anime_tree_v2.glb">Árbol estilo Anime</option>
+      <option value="low_poly_purple_flowers.glb">Árbol con flores púrpura</option>
+      <option value="ficus_bonsai.glb">Ficus Bonsai</option>
+      <option value="flowerpot.glb">Maceta simple</option>
+      <option value="tree_elm.glb">Olmo realista</option>
+    </select>
+  </label>
+  <div id="previewModelo" style="margin-top:10px;"></div>
+
+  <br/>
+  <label>Fecha de nacimiento: <input type="date" id="nacimiento" /></label><br/>
+  <label>Fecha de fallecimiento: <input type="date" id="fallecimiento" /></label><br/>
+  <label>Canción conmemorativa (YouTube): <input id="cancion" /></label>
+  <div id="previewCancion" style="margin-top:10px;"></div>
+
+  <h4>Imágenes actuales:</h4>
+  <div id="previewImagenes"></div>
+
+  <h4>Agregar nuevas imágenes:</h4>
+  <input type="file" id="imagenes" accept="image/*" multiple /><br/><br/>
+  <button onclick="guardarCambios()">Guardar Cambios</button>
 </body>
 </html>

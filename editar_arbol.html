@@ -83,7 +83,12 @@
     <div class="imagenes" id="previewImagenes"></div>
 
     <button type="submit">Guardar cambios</button>
+  
+    <label for="nuevasImagenes">Subir nuevas imágenes (máx. 5)</label>
+    <input type="file" id="nuevasImagenes" accept="image/*" multiple />
+    <div class="imagenes" id="previewNuevas"></div>
   </form>
+
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -109,6 +114,8 @@
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
     const form = document.getElementById("formularioEditar");
+const inputNuevas = document.getElementById("nuevasImagenes");
+const contenedorNuevas = document.getElementById("previewNuevas");
 
     const cargarPreviewImagen = async (ruta) => {
       try {
@@ -162,7 +169,16 @@
         }
       }
 
-      form.addEventListener("submit", async (e) => {
+      inputNuevas.addEventListener("change", () => {
+  contenedorNuevas.innerHTML = "";
+  Array.from(inputNuevas.files).forEach(file => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    contenedorNuevas.appendChild(img);
+  });
+});
+
+form.addEventListener("submit", async (e) => {
         e.preventDefault();
         try {
           await updateDoc(docRef, {

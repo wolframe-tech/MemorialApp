@@ -5,32 +5,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Árbol Conmemorativo</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       padding: 20px;
     }
-    model-viewer {
-      width: 100%;
-      max-width: 600px;
-      height: 500px;
-      margin: auto;
+    h1 {
+      font-size: 24px;
     }
   </style>
 </head>
 <body>
   <h1>Árbol Conmemorativo</h1>
-  <div id="modelo3d">
-    <p>Cargando modelo...</p>
-  </div>
+  <p id="estado">Cargando modelo...</p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
@@ -43,38 +38,51 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     const params = new URLSearchParams(window.location.search);
     const arbolId = params.get("id");
 
-    async function cargarModelo() {
-      const docRef = doc(db, "arboles", arbolId);
-      const docSnap = await getDoc(docRef);
+    const generarTokenDesdeNombre = (nombre) => {
+      const tokens = {
+        "ficus_bonsai.glb": "95008e57-0fb6-464f-a3b6-fa033defd4ed",
+        "flowerpot.glb": "0f3f5742-f37b-4d0a-b993-96f10f7b9f93",
+        "jabami_anime_tree_v2.glb": "d4e45f36-4e65-4b84-8bdf-5f739d123cbf",
+        "low_poly_purple_flowers.glb": "e7eeb43f-1e00-4b97-a038-337be1fefb76",
+        "tree_elm.glb": "60f1f680-3e57-402b-b91d-c7dabc8d4760"
+      };
+      return tokens[nombre] || "";
+    };
 
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const nombreModelo = data.modelo;
-        const modeloRef = ref(storage, `modelos_3d/${nombreModelo}`);
-        const modeloUrl = await getDownloadURL(modeloRef);
+    async function cargarArbol() {
+      const estado = document.getElementById("estado");
+      try {
+        const docRef = doc(db, "arboles", arbolId);
+        const docSnap = await getDoc(docRef);
 
-        document.getElementById("modelo3d").innerHTML = `
-          <model-viewer
-            src="${modeloUrl}"
-            alt="Modelo del árbol"
-            ar
-            ar-modes="scene-viewer webxr quick-look"
-            auto-rotate
-            camera-controls
-            style="width: 100%; height: 500px;"
-          ></model-viewer>
-        `;
-      } else {
-        document.getElementById("modelo3d").innerText = "Árbol no encontrado.";
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const nombreModelo = data.modelo;
+          const token = generarTokenDesdeNombre(nombreModelo);
+
+          if (!token) {
+            estado.textContent = "No se encontró un token válido para este modelo.";
+            return;
+          }
+
+          const url = `https://firebasestorage.googleapis.com/v0/b/memorialapp-b1ccf.firebasestorage.app/o/modelos_3d%2F${encodeURIComponent(nombreModelo)}?alt=media&token=${token}`;
+          const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(url)}&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=https://memorial-app-snowy.vercel.app;end;`;
+
+          window.location.href = intentUrl;
+        } else {
+          estado.textContent = "Árbol no encontrado.";
+        }
+      } catch (error) {
+        console.error("Error al cargar el árbol:", error);
+        estado.textContent = "Error al cargar el árbol.";
       }
     }
 
-    cargarModelo();
+    cargarArbol();
   </script>
 </body>
 </html>

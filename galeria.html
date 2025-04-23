@@ -81,6 +81,15 @@
   <h2>🌿 Galería de Árboles</h2>
   <button class="btn-crear" onclick="window.location.href='crear_arbol.html'">➕ Crear nuevo árbol</button>
   <div class="galeria" id="galeria"></div>
+<!-- Modal para QR -->
+<div id="qrModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div style="background:#fff; padding:20px; border-radius:12px; text-align:center; position:relative;">
+    <button onclick="document.getElementById('qrModal').style.display='none'" style="position:absolute; top:5px; right:10px; background:none; border:none; font-size:20px; cursor:pointer;">×</button>
+    <h3>Escanea este código QR</h3>
+    <div id="popupQR"></div>
+  </div>
+</div>
+
 
   <script type="module" src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script type="module">
@@ -117,6 +126,16 @@
     };
 
     const generarQR = (id) => {
+  const modal = document.getElementById('qrModal');
+  const popupQR = document.getElementById('popupQR');
+  popupQR.innerHTML = '';
+  const url = `https://memorial-app-snowy.vercel.app/ver_arbol.html?id=${id}&origen=qr`;
+  QRCode.toCanvas(document.createElement("canvas"), url, { width: 200 }, function (error, canvas) {
+    if (error) console.error(error);
+    else popupQR.appendChild(canvas);
+    modal.style.display = 'flex';
+  });
+}
       const url = `https://memorial-app-snowy.vercel.app/ver_arbol.html?id=${id}&origen=qr`;
       const contenedor = document.getElementById(`qr-${id}`);
       contenedor.innerHTML = "";

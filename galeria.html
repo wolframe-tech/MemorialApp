@@ -1,4 +1,123 @@
-
 <!DOCTYPE html>
-<!-- OMITIDO POR BREVEDAD: CONTENIDO YA GENERADO DEL ARCHIVO ACTUALIZADO -->
-<!-- Este comentario representa el contenido completo del archivo ya procesado anteriormente -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Galería de Árboles</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .arbol {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    .arbol h3 {
+      margin-top: 0;
+    }
+    button {
+      padding: 8px 16px;
+      margin-right: 10px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .qr-container {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mis Árboles Conmemorativos</h1>
+  <div id="contenedor-arboles"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
+      authDomain: "memorialapp-b1ccf.firebaseapp.com",
+      projectId: "memorialapp-b1ccf",
+      storageBucket: "memorialapp-b1ccf.appspot.com",
+      messagingSenderId: "931250217735",
+      appId: "1:931250217735:web:a010fff296af35e6a41ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const contenedor = document.getElementById("contenedor-arboles");
+
+    const generarQR = (id) => {
+      const url = `https://memorial-app-snowy.vercel.app/ver_arbol.html?id=${id}&origen=qr`;
+      const qrDiv = document.getElementById("qr-" + id);
+      qrDiv.innerHTML = ""; // limpiar anterior
+      const canvas = document.createElement("canvas");
+      qrDiv.appendChild(canvas);
+      QRCode.toCanvas(canvas, url, function (error) {
+        if (error) console.error("Error generando QR:", error);
+      });
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const q = query(collection(db, "arboles"), where("uid", "==", user.uid), orderBy("creado", "desc"));
+        const snapshot = await getDocs(q);
+
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const id = docSnap.id;
+
+          const div = document.createElement("div");
+          div.classList.add("arbol");
+          div.innerHTML = `
+            <h3>${data.nombre}</h3>
+            <p><strong>Nacimiento:</strong> ${data.nacimiento}</p>
+            <p><strong>Fallecimiento:</strong> ${data.fallecimiento}</p>
+            <button onclick="location.href='ver_arbol.html?id=${id}&origen=galeria'">🌱 Plantar árbol</button>
+            <button onclick="generarQR('${id}')">📱 Generar QR</button>
+            <button onclick="location.href='editar_arbol.html?id=${id}'">✏️ Editar</button>
+            <button onclick="eliminarArbol('${id}', '${user.uid}', ${JSON.stringify(data.imagenes || [])})">🗑️ Eliminar</button>
+            <div id="qr-${id}" class="qr-container"></div>
+          `;
+          contenedor.appendChild(div);
+        });
+      } else {
+        window.location.href = "index.html";
+      }
+    });
+
+    window.eliminarArbol = async (id, uid, imagenes) => {
+      if (confirm("¿Estás seguro de que deseas eliminar este árbol?")) {
+        try {
+          for (let url of imagenes) {
+            const path = decodeURIComponent(new URL(url).pathname.split("/o/")[1].split("?")[0]);
+            await deleteObject(ref(storage, path));
+          }
+          await deleteDoc(doc(db, "arboles", id));
+          alert("Árbol eliminado exitosamente.");
+          location.reload();
+        } catch (error) {
+          console.error("Error eliminando árbol:", error);
+          alert("Error eliminando árbol.");
+        }
+      }
+    };
+
+    window.generarQR = generarQR;
+  </script>
+</body>
+</html>

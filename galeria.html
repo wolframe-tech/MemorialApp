@@ -133,7 +133,7 @@
   QRCode.toCanvas(document.createElement("canvas"), url, { width: 200 }, function (error, canvas) {
     if (error) console.error(error);
     else popupQR.appendChild(canvas);
-    modal.style.display = 'flex';
+    setTimeout(() => { modal.style.display = 'flex'; }, 100);
   });
 }
       const url = `https://memorial-app-snowy.vercel.app/ver_arbol.html?id=${id}&origen=qr`;

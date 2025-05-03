@@ -3,27 +3,33 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Iniciar Sesión</title>
-</head>
-<body>
-  <h2>Iniciar Sesión</h2>
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Correo electrónico" required><br>
-    <input type="password" id="password" placeholder="Contraseña" required><br>
-    <button type="submit">Ingresar</button>
-  </form>
-
-  <p><a href="#" onclick="mostrarRecuperacion()">¿Olvidaste tu contraseña?</a></p>
-
-  <div id="recuperar" style="display:none;">
-    <input type="email" id="recuperarCorreo" placeholder="Correo para recuperar">
-    <button onclick="enviarRecuperacion()">Enviar recuperación</button>
-  </div>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memorial App - Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 30px auto;
+      text-align: center;
+    }
+    #recovery-section {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    .link {
+      color: #007bff;
+      text-decoration: underline;
+      cursor: pointer;
+      margin-top: 10px;
+      display: inline-block;
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCU8P2Fd34ymLWBYWDlQfZuImyJh0gmASA",
@@ -36,32 +42,93 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+    async function saveUserData(user) {
+      const ref = doc(db, "usuarios", user.uid);
+      await setDoc(ref, {
+        uid: user.uid,
+        email: user.email,
+        creadoEn: serverTimestamp()
+      });
+    }
+
+    window.register = async () => {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await saveUserData(result.user);
+        alert("Usuario registrado exitosamente");
         window.location.href = "galeria.html";
       } catch (error) {
-        alert("Error al iniciar sesión: " + error.message);
+        alert(error.message);
       }
-    });
-
-    window.mostrarRecuperacion = () => {
-      document.getElementById("recuperar").style.display = "block";
     };
 
-    window.enviarRecuperacion = async () => {
-      const correo = document.getElementById("recuperarCorreo").value;
+    window.login = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
       try {
-        await sendPasswordResetEmail(auth, correo);
-        alert("📧 Se envió un correo para recuperar la contraseña.");
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        await saveUserData(result.user);
+        alert("Inicio de sesión exitoso");
+        window.location.href = "galeria.html";
       } catch (error) {
-        alert("❌ No se pudo enviar el correo: " + error.message);
+        alert(error.message);
+      }
+    };
+
+    window.loginWithGoogle = async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        await saveUserData(result.user);
+        alert("Inicio de sesión con Google exitoso");
+        window.location.href = "galeria.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    window.showRecovery = () => {
+      const email = document.getElementById("email").value;
+      if (!email) {
+        alert("Por favor escribe tu correo antes de recuperar contraseña.");
+        return;
+      }
+      document.getElementById("recovery-email").value = email;
+      document.getElementById("recovery-section").style.display = "block";
+    };
+
+    window.recoverPassword = async () => {
+      const email = document.getElementById("recovery-email").value;
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Se ha enviado un enlace de recuperación a tu correo.");
+        document.getElementById("recovery-section").style.display = "none";
+      } catch (error) {
+        alert(error.message);
       }
     };
   </script>
+</head>
+<body>
+  <h1>Memorial App</h1>
+  <input type="email" id="email" placeholder="Correo electrónico" />
+  <input type="password" id="password" placeholder="Contraseña" />
+  <br /><br />
+  <button onclick="login()">Iniciar sesión</button>
+  <button onclick="register()">Registrarse</button>
+  <button onclick="loginWithGoogle()">Iniciar sesión con Google</button>
+  <br /><br />
+  <div class="link" onclick="showRecovery()">¿Olvidaste tu contraseña?</div>
+
+  <div id="recovery-section">
+    <h4>Recuperar contraseña</h4>
+    <input type="email" id="recovery-email" readonly />
+    <br /><br />
+    <button onclick="recoverPassword()">Enviar enlace de recuperación</button>
+  </div>
 </body>
 </html>
